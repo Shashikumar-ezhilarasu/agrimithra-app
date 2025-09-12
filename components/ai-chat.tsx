@@ -57,11 +57,34 @@ export function AIChat() {
   const mode = searchParams.get("mode")
   const topic = searchParams.get("topic")
 
+  const [geminiStatus, setGeminiStatus] = useState("connecting")
+  useEffect(() => {
+    // Check Gemini API connection on mount
+    async function checkGemini() {
+      try {
+        const response = await fetch("/api/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: "ping" }),
+        })
+        const data = await response.json()
+        if (response.ok && data?.result) {
+          setGeminiStatus("connected")
+        } else {
+          setGeminiStatus("error")
+        }
+      } catch {
+        setGeminiStatus("error")
+      }
+    }
+    checkGemini()
+  }, [])
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       type: "ai",
-      content: `🌾 Hello! I'm your AgriMithra AI assistant. I can help you with:\n\n• 📸 **Image Analysis** - Crop disease detection\n• 🎤 **Voice Queries** - Natural language farming questions\n• 🎥 **Video Analysis** - Field assessment and techniques\n• 📱 **NFC Data** - Smart tag information\n\nHow can I help you today?`,
+      content: t("aiWelcome") ||
+        "🌾 Hello! I'm your AgriMithra AI assistant. I can help you with:\n\n• 📸 Image Analysis - Crop disease detection\n• 🎤 Voice Queries - Natural language farming questions\n• 🎥 Video Analysis - Field assessment and techniques\n• 📱 NFC Data - Smart tag information\n\nHow can I help you today?",
       timestamp: new Date(),
     },
   ])
@@ -251,44 +274,73 @@ export function AIChat() {
     setIsTyping(true)
 
     // Gemini API integration via Next.js API route
-    try {
-      const prompt = `Reply in ${language}. Question: ${inputText}. Keep answer short and precise for Indian farmers.`
-      const response = await fetch("/api/gemini", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      })
-      const data = await response.json()
-      let aiText = data?.result
-      if ((!aiText || aiText.length < 5) && data?.error) {
-        aiText = `Gemini Error: ${data.error}`
+    let retries = 0
+    const maxRetries = 3
+    let aiText = ""
+    let errorMsg = ""
+    const prompt = `Reply in ${language}. Begin with: 'To answer your question about ${inputText},' and then provide a longer, conversational, helpful response for Indian farmers.`
+    while (retries < maxRetries) {
+      try {
+        const response = await fetch("/api/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        })
+        const data = await response.json()
+        aiText = data?.result
+        if (response.status === 503) {
+          errorMsg = t("geminiOverloaded") || "Gemini is overloaded. Retrying..."
+          setMessages((prev) => [...prev, {
+            id: (Date.now() + 1).toString(),
+            type: "ai",
+            content: errorMsg,
+            timestamp: new Date(),
+          }])
+          retries++
+          await new Promise((resolve) => setTimeout(resolve, 2000))
+          continue
+        }
+        if ((!aiText || aiText.length < 5) && data?.error) {
+          aiText = `Gemini Error: ${data.error}`
+        }
+        if (!aiText || aiText.length < 5) {
+          aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
+        }
+        break
+      } catch (err) {
+        aiText = `Gemini Error: ${err instanceof Error ? err.message : String(err)}`
+        break
       }
-      if (!aiText || aiText.length < 5) {
-        aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
-      }
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "ai",
-        content: aiText,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, aiResponse])
-    } catch (err) {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        type: "ai",
-        content: `Gemini Error: ${err instanceof Error ? err.message : String(err)}`,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, aiResponse])
-    } finally {
-      setIsTyping(false)
     }
+    setMessages((prev) => [...prev, {
+      id: (Date.now() + 2).toString(),
+      type: "ai",
+      content: aiText,
+      timestamp: new Date(),
+    }])
+    setIsTyping(false)
   }
 
   const handleTextToSpeech = (text: string) => {
-    console.log("[v0] Playing TTS:", text)
-    alert("🔊 Playing audio response in your selected language...")
+    if (!window.speechSynthesis) {
+      alert("Text-to-speech is not supported in this browser.")
+      return
+    }
+    // Map app language to BCP-47 language code
+    const langMap: Record<string, string> = {
+      en: "en-IN",
+      hi: "hi-IN",
+      ta: "ta-IN",
+      ml: "ml-IN",
+      kn: "kn-IN",
+    }
+    const synth = window.speechSynthesis
+    const utter = new window.SpeechSynthesisUtterance(text)
+    utter.lang = langMap[language] || "en-IN"
+    utter.rate = 1
+    utter.pitch = 1
+    synth.cancel() // Stop any previous speech
+    synth.speak(utter)
   }
 
   const handleSaveAnswer = (messageId: string) => {
@@ -348,7 +400,15 @@ export function AIChat() {
             <div>
               <h1 className="font-semibold text-foreground">AgriMithra AI</h1>
               <p className="text-xs text-muted-foreground">
-                {isTyping ? t("typing") : isListening ? t("listening") : "Online • Ready to help"}
+                {isTyping
+                  ? t("typing")
+                  : isListening
+                  ? t("listening")
+                  : geminiStatus === "connected"
+                  ? t("connected") || "Connected"
+                  : geminiStatus === "error"
+                  ? t("aiError") || "Offline"
+                  : "Connecting..."}
               </p>
             </div>
           </div>
@@ -507,12 +567,12 @@ export function AIChat() {
         {/* Quick Suggestions */}
         <div className="flex flex-wrap gap-2 mt-3">
           {[
-            "Crop disease analysis",
-            "Current market prices",
-            "Weather forecast",
-            "Government schemes",
-            "Fertilizer recommendations",
-            "Pest control methods",
+            t("cropDiseaseAnalysis"),
+            t("currentMarketPrices"),
+            t("weatherForecast"),
+            t("governmentSchemes"),
+            t("fertilizerRecommendations"),
+            t("pestControlMethods"),
           ].map((suggestion) => (
             <Button
               key={suggestion}

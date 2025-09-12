@@ -25,5 +25,6 @@
     "getStarted": "Get Started"
   }
   ,
-  "aiError": "Sorry, I couldn't get an answer from Gemini. Please try again later."
+  "aiError": "Sorry, I couldn't get an answer from Gemini. Please try again later.",
+  "aiWelcome": "🌾 Hello! I'm your AgriMithra AI assistant. I can help you with:\n\n• 📸 Image Analysis - Crop disease detection\n• 🎤 Voice Queries - Natural language farming questions\n• 🎥 Video Analysis - Field assessment and techniques\n• 📱 NFC Data - Smart tag information\n\nHow can I help you today?"
 }
