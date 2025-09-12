@@ -10,6 +10,11 @@ interface LanguageContextType {
 
 const translations = {
   en: {
+  aboutAgriMithraDesc: "Made for SIH 2025. By Students of SRM.",
+  version: "Version",
+  lastUpdated: "Last Updated",
+  developer: "Developer",
+  developerName: "SRM Students",
     // Navigation
     dashboard: "Dashboard",
     marketplace: "Marketplace",
@@ -72,6 +77,11 @@ const translations = {
   termsAndPrivacy: "By continuing, you agree to our Terms of Service and Privacy Policy",
   },
   hi: {
+  aboutAgriMithraDesc: "SIH 2025 के लिए बनाया गया। SRM के छात्रों द्वारा।",
+  version: "संस्करण",
+  lastUpdated: "अंतिम अपडेट",
+  developer: "डेवलपर",
+  developerName: "SRM छात्र",
     // Navigation
     dashboard: "डैशबोर्ड",
     marketplace: "बाज़ार",
@@ -134,6 +144,11 @@ const translations = {
   termsAndPrivacy: "जारी रखते हुए, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत हैं",
   },
   ta: {
+  aboutAgriMithraDesc: "SIH 2025-க்கு உருவாக்கப்பட்டது. SRM மாணவர்களால்.",
+  version: "பதிப்பு",
+  lastUpdated: "கடைசியாக புதுப்பிக்கப்பட்டது",
+  developer: "டெவலப்பர்",
+  developerName: "SRM மாணவர்கள்",
   // Auth Page
   languageSettings: "மொழியை தேர்ந்தெடுக்கவும்",
   welcome: "AgriMithra-க்கு வரவேற்கிறோம்",
@@ -195,6 +210,11 @@ const translations = {
     discussions: "விவாதங்கள்",
   },
   ml: {
+  aboutAgriMithraDesc: "SIH 2025-ന് വേണ്ടി നിർമ്മിച്ചത്. SRM വിദ്യാർത്ഥികൾ നിർമ്മിച്ചത്.",
+  version: "പതിപ്പ്",
+  lastUpdated: "അവസാനമായി പുതുക്കിയത്",
+  developer: "ഡെവലപ്പർ",
+  developerName: "SRM വിദ്യാർത്ഥികൾ",
   // Auth Page
   languageSettings: "ഭാഷ തിരഞ്ഞെടുക്കുക",
   welcome: "AgriMithra-യിലേക്ക് സ്വാഗതം",

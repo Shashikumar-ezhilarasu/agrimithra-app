@@ -53,7 +53,7 @@ const topicResponses = {
 export function AIChat() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const mode = searchParams.get("mode")
   const topic = searchParams.get("topic")
 
@@ -246,37 +246,44 @@ export function AIChat() {
       content: inputText,
       timestamp: new Date(),
     }
-
     setMessages((prev) => [...prev, userMessage])
     setInputText("")
     setIsTyping(true)
 
-    setTimeout(() => {
-      let responseContent =
-        "I understand your question about farming. Let me help you with detailed information and practical solutions."
-
-      // Context-aware responses
-      const lowerInput = inputText.toLowerCase()
-      if (lowerInput.includes("price") || lowerInput.includes("market")) {
-        responseContent = topicResponses.market_prices
-      } else if (lowerInput.includes("scheme") || lowerInput.includes("government")) {
-        responseContent = topicResponses.govt_schemes
-      } else if (lowerInput.includes("disease") || lowerInput.includes("pest")) {
-        responseContent = topicResponses.disease_alerts
-      } else if (lowerInput.includes("fertilizer") || lowerInput.includes("nutrient")) {
-        responseContent =
-          "🌱 **Fertilizer Recommendations:** \n\n**For Rice:** NPK 20:10:10 @ 100kg/acre \n**For Wheat:** Urea @ 50kg/acre + DAP @ 25kg/acre \n**For Vegetables:** Organic compost + balanced NPK \n\n**Application Time:** Early morning or evening for best absorption."
+    // Gemini API integration via Next.js API route
+    try {
+      const prompt = `Reply in ${language}. Question: ${inputText}. Keep answer short and precise for Indian farmers.`
+      const response = await fetch("/api/gemini", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      })
+      const data = await response.json()
+      let aiText = data?.result
+      if ((!aiText || aiText.length < 5) && data?.error) {
+        aiText = `Gemini Error: ${data.error}`
       }
-
+      if (!aiText || aiText.length < 5) {
+        aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
+      }
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: "ai",
-        content: responseContent,
+        content: aiText,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, aiResponse])
+    } catch (err) {
+      const aiResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        type: "ai",
+        content: `Gemini Error: ${err instanceof Error ? err.message : String(err)}`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, aiResponse])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const handleTextToSpeech = (text: string) => {

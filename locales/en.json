@@ -24,4 +24,6 @@
     "next": "Next",
     "getStarted": "Get Started"
   }
+  ,
+  "aiError": "Sorry, I couldn't get an answer from Gemini. Please try again later."
 }

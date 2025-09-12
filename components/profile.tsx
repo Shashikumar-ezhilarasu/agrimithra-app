@@ -57,10 +57,10 @@ export function Profile() {
     name: "Ravi Kumar",
     phone: "+91 9876543210",
     email: "ravi.kumar@email.com",
-    location: "Kochi, Kerala",
-    farmSize: "5.2 acres",
-    cropsGrown: ["Rice", "Coconut", "Pepper", "Cardamom"],
-    joinedDate: "March 2024",
+    location: t("location_kochi"),
+    farmSize: `5.2 ${t("acres")}`,
+    cropsGrown: [t("rice"), t("coconut"), t("pepper"), t("cardamom")],
+    joinedDate: t("joined_march_2024"),
     totalQueries: 47,
     savedAnswers: 12,
   }
@@ -77,8 +77,8 @@ export function Profile() {
   const settingsItems = [
     {
       icon: Globe,
-      title: t("languageSettings"),
-      description: "Change app language",
+  title: t("languageSettings"),
+  description: t("changeAppLanguage"),
       action: (
         <Select value={language} onValueChange={handleLanguageChange}>
           <SelectTrigger className="w-32">
@@ -96,35 +96,35 @@ export function Profile() {
     },
     {
       icon: Bell,
-      title: t("notifications"),
-      description: "Manage notification preferences",
+  title: t("notifications"),
+  description: t("manageNotifications"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: Wifi,
-      title: "NFC Management",
-      description: "Offline access settings",
+  title: t("nfcManagement"),
+  description: t("offlineAccessSettings"),
       action: <Switch checked={nfcEnabled} onCheckedChange={setNfcEnabled} />,
     },
     {
       icon: Bookmark,
-      title: "Saved Queries",
-      description: `${farmerProfile.savedAnswers} saved answers`,
+  title: t("savedQueries"),
+  description: `${farmerProfile.savedAnswers} ${t("savedAnswers")}`,
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: HelpCircle,
-      title: "Support",
-      description: "Get help and contact us",
+  title: t("support"),
+  description: t("getHelpContactUs"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: Info,
-      title: "About AgriMithra",
-      description: "App info and team details",
+  title: t("aboutAgriMithra"),
+  description: t("appInfoTeamDetails"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
@@ -170,11 +170,11 @@ export function Profile() {
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Wheat className="h-3 w-3 mr-2" />
-                    {farmerProfile.farmSize} farm
+                    {farmerProfile.farmSize} {t("farm")}
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Calendar className="h-3 w-3 mr-2" />
-                    Joined {farmerProfile.joinedDate}
+                    {t("joined")}: {farmerProfile.joinedDate}
                   </div>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export function Profile() {
 
             {/* Crops Grown */}
             <div className="mt-4">
-              <p className="text-sm font-medium text-foreground mb-2">Crops Grown:</p>
+              <p className="text-sm font-medium text-foreground mb-2">{t("cropsGrown")}</p>
               <div className="flex flex-wrap gap-2">
                 {farmerProfile.cropsGrown.map((crop) => (
                   <Badge key={crop} variant="secondary" className="text-xs">
@@ -211,11 +211,11 @@ export function Profile() {
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold text-primary">{farmerProfile.totalQueries}</p>
-                  <p className="text-xs text-muted-foreground">Total Queries</p>
+                  <p className="text-xs text-muted-foreground">{t("totalQueries")}</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-accent">{farmerProfile.savedAnswers}</p>
-                  <p className="text-xs text-muted-foreground">Saved Answers</p>
+                  <p className="text-xs text-muted-foreground">{t("savedAnswers")}</p>
                 </div>
               </div>
             </div>
@@ -256,21 +256,14 @@ export function Profile() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Notification Settings</DialogTitle>
+              <DialogTitle>{t("notificationSettings")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {Object.entries(notifications).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium capitalize">{key.replace(/([A-Z])/g, " $1")}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {key === "push" && "Receive push notifications"}
-                      {key === "email" && "Get updates via email"}
-                      {key === "sms" && "SMS notifications for important alerts"}
-                      {key === "weather" && "Weather and climate updates"}
-                      {key === "market" && "Market price changes"}
-                      {key === "community" && "Community posts and messages"}
-                    </p>
+                    <p className="font-medium capitalize">{t(key + "Label")}</p>
+                    <p className="text-sm text-muted-foreground">{t(key + "Desc")}</p>
                   </div>
                   <Switch
                     checked={value}
@@ -285,7 +278,7 @@ export function Profile() {
         {/* Support Options */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Help & Support</CardTitle>
+            <CardTitle className="text-lg">{t("helpSupport")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
@@ -294,8 +287,8 @@ export function Profile() {
                   <MessageCircle className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Live Chat Support</p>
-                  <p className="text-xs text-muted-foreground">Chat with our support team</p>
+                  <p className="font-medium text-foreground text-sm">{t("liveChatSupport")}</p>
+                  <p className="text-xs text-muted-foreground">{t("chatWithSupportTeam")}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -306,8 +299,8 @@ export function Profile() {
                   <FileText className="h-4 w-4 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">FAQ & Guides</p>
-                  <p className="text-xs text-muted-foreground">Common questions and tutorials</p>
+                  <p className="font-medium text-foreground text-sm">{t("faqGuides")}</p>
+                  <p className="text-xs text-muted-foreground">{t("commonQuestionsTutorials")}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -318,8 +311,8 @@ export function Profile() {
                   <Shield className="h-4 w-4 text-purple-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground text-sm">Privacy & Terms</p>
-                  <p className="text-xs text-muted-foreground">Privacy policy and terms of service</p>
+                  <p className="font-medium text-foreground text-sm">{t("privacyTerms")}</p>
+                  <p className="text-xs text-muted-foreground">{t("privacyPolicyTerms")}</p>
                 </div>
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -330,25 +323,24 @@ export function Profile() {
         {/* About Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">About AgriMithra</CardTitle>
+            <CardTitle className="text-lg">{t("aboutAgriMithra")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm text-muted-foreground">
               <p>
-                AgriMithra is your 24/7 digital agriculture expert, designed to empower farmers with AI-powered
-                advisory, real-time market information, and community support.
+                {t("aboutAgriMithraDesc")}
               </p>
               <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>Version</span>
+                <span>{t("version")}</span>
                 <span className="font-medium">1.0.0</span>
               </div>
               <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>Last Updated</span>
-                <span className="font-medium">December 2024</span>
+                <span>{t("lastUpdated")}</span>
+                <span className="font-medium">September 2025</span>
               </div>
               <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>Developer</span>
-                <span className="font-medium">AgriTech Solutions</span>
+                <span>{t("developer")}</span>
+                <span className="font-medium">{t("developerName")}</span>
               </div>
             </div>
           </CardContent>
