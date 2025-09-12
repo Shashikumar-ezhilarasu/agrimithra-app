@@ -1,0 +1,27 @@
+{
+  "splash": {
+    "appName": "AgriMithra",
+    "tagline": "Your 24/7 Digital Agri Expert",
+    "getStarted": "Get Started"
+  },
+  "onboarding": {
+    "back": "Back",
+    "skip": "Skip",
+    "slides": [
+      {
+        "title": "Ask by Voice, Text, or Image",
+        "description": "Get instant answers to your farming questions using voice commands, text messages, or by uploading photos of your crops."
+      },
+      {
+        "title": "Get Crop Prices & Government Schemes",
+        "description": "Access real-time market prices, weather updates, and discover government schemes that benefit your farming business."
+      },
+      {
+        "title": "Buy & Sell in Farmer Marketplace",
+        "description": "Connect with other farmers to buy and sell crops, equipment, and farming supplies in our trusted community marketplace."
+      }
+    ],
+    "next": "Next",
+    "getStarted": "Get Started"
+  }
+}
