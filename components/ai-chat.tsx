@@ -50,14 +50,22 @@ const topicResponses = {
     "⚠️ **Current Disease Alerts in Your Region:** \n\n**HIGH RISK:** \n• Leaf blight in rice crops \n• Late blight in potato \n\n**MODERATE RISK:** \n• Powdery mildew in wheat \n• Aphid infestation in mustard \n\n**Prevention:** Apply preventive fungicide spray and maintain field hygiene.",
 }
 
+// Named export for direct imports
 export function AIChat() {
+  const [model, setModel] = useState("gemini")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { t, language } = useLanguage()
-  const mode = searchParams.get("mode")
-  const topic = searchParams.get("topic")
+  const { language, setLanguage, t } = useLanguage()
+  const [messages, setMessages] = useState<Message[]>([])
+  const [inputText, setInputText] = useState("")
+  const [isTyping, setIsTyping] = useState(false)
+  const [geminiStatus, setGeminiStatus] = useState("idle")
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [showSuggestions, setShowSuggestions] = useState(true)
+  const [isListening, setIsListening] = useState(false)
+  const mode = searchParams?.get("mode")
+  const topic = searchParams?.get("topic")
 
-  const [geminiStatus, setGeminiStatus] = useState("connecting")
   useEffect(() => {
     // Check Gemini API connection on mount
     async function checkGemini() {
@@ -65,61 +73,49 @@ export function AIChat() {
         const response = await fetch("/api/gemini", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: "ping" }),
+          body: JSON.stringify({ prompt: "hello" }),
         })
-        const data = await response.json()
-        if (response.ok && data?.result) {
-          setGeminiStatus("connected")
+        if (response.ok) {
+          setGeminiStatus("online")
         } else {
-          setGeminiStatus("error")
+          setGeminiStatus("offline")
         }
-      } catch {
-        setGeminiStatus("error")
+      } catch (error) {
+        setGeminiStatus("offline")
       }
     }
     checkGemini()
   }, [])
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "ai",
-      content: t("aiWelcome") ||
-        "🌾 Hello! I'm your AgriMithra AI assistant. I can help you with:\n\n• 📸 Image Analysis - Crop disease detection\n• 🎤 Voice Queries - Natural language farming questions\n• 🎥 Video Analysis - Field assessment and techniques\n• 📱 NFC Data - Smart tag information\n\nHow can I help you today?",
-      timestamp: new Date(),
-    },
-  ])
-  const [inputText, setInputText] = useState("")
-  const [isListening, setIsListening] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+    }
+  }, [messages])
 
   useEffect(() => {
     if (mode === "photo") {
-      handleImageUpload()
+        handleImageUpload()
     } else if (mode === "video") {
-      handleVideoUpload()
+        handleVideoUpload()
     } else if (mode === "voice") {
-      handleVoiceInput()
+        handleVoiceInput()
     } else if (mode === "nfc") {
-      handleNFCData()
+        handleNFCData()
     } else if (topic && topic in topicResponses) {
-      handleTopicQuery(topic)
+        handleTopicQuery(topic)
+    } else {
+      // Set initial message
+      setMessages([
+        {
+          id: "1",
+          type: "ai",
+          content: t("welcomeMessage"),
+          timestamp: new Date(),
+        },
+      ])
     }
-  }, [mode, topic])
-
-  const scrollToBottom = () => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector("[data-radix-scroll-area-viewport]")
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight
-      }
-    }
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  }, [mode, topic, t])
 
   const handleTopicQuery = (topicKey: string) => {
     const userMessage: Message = {
@@ -219,7 +215,6 @@ export function AIChat() {
   const handleVoiceInput = () => {
     if (!isListening) {
       setIsListening(true)
-      setIsRecording(true)
 
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -232,7 +227,6 @@ export function AIChat() {
 
       setTimeout(() => {
         setIsListening(false)
-        setIsRecording(false)
 
         // Update the user message to show completed recording
         setMessages((prev) =>
@@ -272,52 +266,68 @@ export function AIChat() {
     setMessages((prev) => [...prev, userMessage])
     setInputText("")
     setIsTyping(true)
+    setShowSuggestions(false)
 
-    // Gemini API integration via Next.js API route
-    let retries = 0
-    const maxRetries = 3
     let aiText = ""
-    let errorMsg = ""
-    const prompt = `Reply in ${language}. Begin with: 'To answer your question about ${inputText},' and then provide a longer, conversational, helpful response for Indian farmers.`
-    while (retries < maxRetries) {
+    if (model === "gemini") {
+      let retries = 0
+      const maxRetries = 3
+      let errorMsg = ""
+      const prompt = `Reply in ${language}. Begin with: 'To answer your question about ${inputText},' and then provide a longer, conversational, helpful response for Indian farmers.`
+      while (retries < maxRetries) {
+        try {
+          const response = await fetch("/api/gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt }),
+          })
+          const data = await response.json()
+          aiText = data?.result
+          if (response.status === 503) {
+            errorMsg = t("geminiOverloaded") || "Gemini is overloaded. Retrying..."
+            setMessages((prev) => [...prev, {
+              id: (Date.now() + 1).toString(),
+              type: "ai",
+              content: errorMsg,
+              timestamp: new Date(),
+            }])
+            retries++
+            await new Promise((resolve) => setTimeout(resolve, 2000))
+            continue
+          }
+          if ((!aiText || aiText.length < 5) && data?.error) {
+            aiText = `Gemini Error: ${data.error}`
+          }
+          if (!aiText || aiText.length < 5) {
+            aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
+          }
+          break
+        } catch (err) {
+          aiText = `Gemini Error: ${err instanceof Error ? err.message : String(err)}`
+          break
+        }
+      }
+    } else if (model === "rag") {
       try {
-        const response = await fetch("/api/gemini", {
+        const response = await fetch("/api/rag-chatbot", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt }),
+          body: JSON.stringify({ query: inputText, language }),
         })
         const data = await response.json()
-        aiText = data?.result
-        if (response.status === 503) {
-          errorMsg = t("geminiOverloaded") || "Gemini is overloaded. Retrying..."
-          setMessages((prev) => [...prev, {
-            id: (Date.now() + 1).toString(),
-            type: "ai",
-            content: errorMsg,
-            timestamp: new Date(),
-          }])
-          retries++
-          await new Promise((resolve) => setTimeout(resolve, 2000))
-          continue
-        }
-        if ((!aiText || aiText.length < 5) && data?.error) {
-          aiText = `Gemini Error: ${data.error}`
-        }
-        if (!aiText || aiText.length < 5) {
-          aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
-        }
-        break
+        aiText = data?.answer || t("aiError")
       } catch (err) {
-        aiText = `Gemini Error: ${err instanceof Error ? err.message : String(err)}`
-        break
+        aiText = t("aiError") || "RAG backend unavailable."
       }
     }
-    setMessages((prev) => [...prev, {
-      id: (Date.now() + 2).toString(),
-      type: "ai",
-      content: aiText,
-      timestamp: new Date(),
-    }])
+
+    const aiMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        type: "ai",
+        content: aiText,
+        timestamp: new Date(),
+    }
+    setMessages((prev) => [...prev, aiMessage])
     setIsTyping(false)
   }
 
@@ -326,7 +336,6 @@ export function AIChat() {
       alert("Text-to-speech is not supported in this browser.")
       return
     }
-    // Map app language to BCP-47 language code
     const langMap: Record<string, string> = {
       en: "en-IN",
       hi: "hi-IN",
@@ -339,7 +348,7 @@ export function AIChat() {
     utter.lang = langMap[language] || "en-IN"
     utter.rate = 1
     utter.pitch = 1
-    synth.cancel() // Stop any previous speech
+    synth.cancel()
     synth.speak(utter)
   }
 
@@ -357,37 +366,20 @@ export function AIChat() {
     setInputText(suggestion)
     setTimeout(() => {
       if (suggestion) {
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          type: "user",
-          content: suggestion,
-          timestamp: new Date(),
-        }
-        setMessages((prev) => [...prev, userMessage])
-        setIsTyping(true)
-
-        setTimeout(() => {
-          let responseContent = "Here's detailed information about your query with practical farming solutions."
-          if (suggestion.includes("price")) responseContent = topicResponses.market_prices
-          else if (suggestion.includes("schemes")) responseContent = topicResponses.govt_schemes
-          else if (suggestion.includes("disease")) responseContent = topicResponses.disease_alerts
-
-          const aiResponse: Message = {
-            id: (Date.now() + 1).toString(),
-            type: "ai",
-            content: responseContent,
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, aiResponse])
-          setIsTyping(false)
-        }, 1500)
+        handleSendMessage()
       }
     }, 100)
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
+      <div className="flex justify-end p-2">
+        <label htmlFor="model-select" className="sr-only">Model</label>
+        <select id="model-select" value={model} onChange={e => setModel(e.target.value)} className="border rounded px-2 py-1 text-xs" title="Choose AI Model">
+          <option value="gemini">Gemini</option>
+          <option value="rag">AgriMithra RAG</option>
+        </select>
+      </div>
       <div className="bg-card border-b border-border p-4">
         <div className="flex items-center space-x-3">
           <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
@@ -404,9 +396,9 @@ export function AIChat() {
                   ? t("typing")
                   : isListening
                   ? t("listening")
-                  : geminiStatus === "connected"
+                  : geminiStatus === "online"
                   ? t("connected") || "Connected"
-                  : geminiStatus === "error"
+                  : geminiStatus === "offline"
                   ? t("aiError") || "Offline"
                   : "Connecting..."}
               </p>
@@ -418,7 +410,6 @@ export function AIChat() {
         </div>
       </div>
 
-      {/* Chat Messages */}
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message) => (
@@ -448,7 +439,6 @@ export function AIChat() {
                   </p>
                 </div>
 
-                {/* AI Message Actions */}
                 {message.type === "ai" && (
                   <div className="flex items-center space-x-2 mt-2 ml-2">
                     <Button
@@ -482,7 +472,6 @@ export function AIChat() {
                 )}
               </div>
 
-              {/* Avatar */}
               <div className={`${message.type === "user" ? "order-1" : "order-2"}`}>
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center ${
@@ -499,7 +488,6 @@ export function AIChat() {
             </div>
           ))}
 
-          {/* Typing Indicator */}
           {isTyping && (
             <div className="flex justify-start">
               <div className="max-w-[80%]">
@@ -519,10 +507,30 @@ export function AIChat() {
         </div>
       </ScrollArea>
 
-      {/* Input Area */}
       <div className="bg-card border-t border-border p-4">
+        {showSuggestions && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {[
+              t("cropDiseaseAnalysis"),
+              t("currentMarketPrices"),
+              t("weatherForecast"),
+              t("governmentSchemes"),
+              t("fertilizerRecommendations"),
+              t("pestControlMethods"),
+            ].map((suggestion) => (
+              <Button
+                key={suggestion}
+                variant="outline"
+                size="sm"
+                onClick={() => handleSuggestionClick(suggestion)}
+                className="text-xs bg-transparent border-border hover:bg-muted"
+              >
+                {suggestion}
+              </Button>
+            ))}
+          </div>
+        )}
         <div className="flex items-center space-x-2">
-          {/* Voice Button */}
           <Button
             variant="ghost"
             size="sm"
@@ -532,7 +540,6 @@ export function AIChat() {
             <Mic className="h-4 w-4" />
           </Button>
 
-          {/* Text Input */}
           <div className="flex-1">
             <Input
               value={inputText}
@@ -544,7 +551,6 @@ export function AIChat() {
             />
           </div>
 
-          {/* Media Upload Buttons */}
           <Button variant="ghost" size="sm" onClick={handleImageUpload}>
             <Camera className="h-4 w-4" />
           </Button>
@@ -553,7 +559,6 @@ export function AIChat() {
             <Video className="h-4 w-4" />
           </Button>
 
-          {/* Send Button */}
           <Button
             onClick={handleSendMessage}
             disabled={!inputText.trim() || isListening}
@@ -563,29 +568,10 @@ export function AIChat() {
             <Send className="h-4 w-4" />
           </Button>
         </div>
-
-        {/* Quick Suggestions */}
-        <div className="flex flex-wrap gap-2 mt-3">
-          {[
-            t("cropDiseaseAnalysis"),
-            t("currentMarketPrices"),
-            t("weatherForecast"),
-            t("governmentSchemes"),
-            t("fertilizerRecommendations"),
-            t("pestControlMethods"),
-          ].map((suggestion) => (
-            <Button
-              key={suggestion}
-              variant="outline"
-              size="sm"
-              onClick={() => handleSuggestionClick(suggestion)}
-              className="text-xs bg-transparent border-border hover:bg-muted"
-            >
-              {suggestion}
-            </Button>
-          ))}
-        </div>
       </div>
     </div>
   )
 }
+
+// Default export for legacy compatibility
+export default AIChat
