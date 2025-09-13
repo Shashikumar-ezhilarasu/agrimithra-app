@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -30,7 +30,7 @@ interface CommunityPost {
   avatar: string
   location: string
   timeAgo: string
-  content: string
+  contentByLang: Record<string, string>
   image?: string
   likes: number
   comments: number
@@ -42,11 +42,16 @@ const samplePosts: CommunityPost[] = [
   {
     id: "1",
     author: "Ravi Kumar",
-    avatar: "/farmer-avatar.jpg",
+    avatar: "/placeholder-user.jpg",
     location: "Kochi, Kerala",
     timeAgo: "2 hours ago",
-    content:
-      "Great harvest this season! Used organic fertilizers and got 20% more yield than last year. Happy to share my experience with fellow farmers.",
+    contentByLang: {
+      en: "Great harvest this season! Used organic fertilizers and got 20% more yield than last year. Happy to share my experience with fellow farmers.",
+      hi: "इस बार अच्छी फसल हुई! जैविक खाद का उपयोग किया और पिछले साल से 20% ज्यादा उत्पादन मिला। अपने अनुभव किसानों के साथ बाँटकर खुशी हो रही है।",
+      ml: "ഈ സീസണിൽ നല്ല വിളവ് ലഭിച്ചു! ജൈവ വളം ഉപയോഗിച്ചതിനാൽ കഴിഞ്ഞ വർഷത്തേക്കാൾ 20% കൂടുതലായി വിളവ് കിട്ടി. സഹകർഷകരുമായി എന്റെ അനുഭവം പങ്കിടുന്നതിൽ സന്തോഷം.",
+      ta: "இந்த பருவத்தில் நல்ல அறுவடை கிடைத்தது! இயற்கை உரம் பயன்படுத்தி, கடந்த ஆண்டைவிட 20% அதிக மகசூல் பெற்றேன். என் அனுபவத்தை விவசாயிகளுடன் பகிர்ந்து மகிழ்ச்சி.",
+      te: "ఈ సీజన్‌లో మంచి పంట వచ్చింది! సేంద్రియ ఎరువులు వాడి గత ఏడాదికంటే 20% ఎక్కువ దిగుబడి వచ్చింది. నా అనుభవాన్ని రైతు మిత్రులతో పంచుకోవడం ఆనందంగా ఉంది."
+    },
     image: "/rice-grains.jpg",
     likes: 24,
     comments: 8,
@@ -56,11 +61,16 @@ const samplePosts: CommunityPost[] = [
   {
     id: "2",
     author: "Meera Devi",
-    avatar: "/farmer-avatar.jpg",
+    avatar: "/placeholder-user.jpg",
     location: "Palakkad, Kerala",
     timeAgo: "4 hours ago",
-    content:
-      "Has anyone tried drip irrigation for tomatoes? Looking for advice on setup costs and water savings. Please share your experience!",
+    contentByLang: {
+      en: "Has anyone tried drip irrigation for tomatoes? Looking for advice on setup costs and water savings. Please share your experience!",
+      hi: "क्या किसी ने टमाटर के लिए ड्रिप सिंचाई का उपयोग किया है? सेटअप खर्च और पानी की बचत पर सलाह चाहिए। कृपया अपना अनुभव साझा करें!",
+      ml: "തക്കാളിക്ക് ഡ്രിപ്പ് ഇറിഗേഷൻ പരീക്ഷിച്ചവർ ഉണ്ടോ? സജ്ജീകരണ ചെലവും ജലസംരക്ഷണവും സംബന്ധിച്ച് ഉപദേശം വേണം. അനുഭവം പങ്കുവെയ്ക്കണേ!",
+      ta: "தக்காளிக்கு ட்ரிப் பாசனம் செய்து பார்த்தவர்களா? அமைக்கும் செலவு, தண்ணீர் சேமிப்பு குறித்த ஆலோசனை வேண்டும். உங்கள் அனுபவத்தை பகிருங்கள்!",
+      te: "టమోటాకు డ్రిప్ ఇరిగేషన్ వాడినవారు ఉన్నారా? సెటప్ ఖర్చు, నీటి ఆదా గురించి సూచనలు కావాలి. మీ అనుభవం చెప్పండి!"
+    },
     likes: 12,
     comments: 15,
     isLiked: true,
@@ -69,11 +79,16 @@ const samplePosts: CommunityPost[] = [
   {
     id: "3",
     author: "Suresh Nair",
-    avatar: "/farmer-avatar.jpg",
+    avatar: "/placeholder-user.jpg",
     location: "Thrissur, Kerala",
     timeAgo: "1 day ago",
-    content:
-      "Pro tip: Apply neem oil spray early morning for best pest control results. Avoid spraying during hot afternoon sun. Works great for my vegetable crops!",
+    contentByLang: {
+      en: "Pro tip: Apply neem oil spray early morning for best pest control results. Avoid spraying during hot afternoon sun. Works great for my vegetable crops!",
+      hi: "टिप: नीम का तेल सुबह जल्दी छिड़कें, कीट नियंत्रण में बेहतरीन असर होता है। दोपहर की तेज धूप में छिड़काव न करें। मेरी सब्जियों में बहुत अच्छा परिणाम मिला है!",
+      ml: "ടിപ്പ്: വെളുപ്പിന് നേരത്തെ വേപ്പെണ്ണ സ്പ്രേ ചെയ്യുക, കീടനിയന്ത്രണത്തിന് ഏറ്റവും ഫലപ്രദം. ഉച്ചതിരിഞ്ഞ് ചൂടിൽ സ്പ്രേ ചെയ്യരുത്. എന്റെ പച്ചക്കറികളിൽ മികച്ച ഫലം കിട്ടി!",
+      ta: "சிறப்பு குறிப்பு: காலையில் சீக்கிரம் வேப்பெண்ணெய் தெளித்தால் சிறந்த பூச்சி கட்டுப்பாடு கிடைக்கும். மதிய வெயிலில் தெளிக்க வேண்டாம். என் காய்கறிகளில் நல்ல பலன் கிடைத்தது!",
+      te: "సలహా: ఉదయం తొందరగా వేప నూనె స్ప్రే చేస్తే కీటక నియంత్రణ బాగా జరుగుతుంది. మధ్యాహ్నం ఎండలో స్ప్రే చేయకండి. నా కూరగాయలకు చాలా మంచి ఫలితం వచ్చింది!"
+    },
     likes: 31,
     comments: 6,
     isLiked: false,
@@ -82,11 +97,16 @@ const samplePosts: CommunityPost[] = [
   {
     id: "4",
     author: "Krishnan Pillai",
-    avatar: "/farmer-avatar.jpg",
+    avatar: "/placeholder-user.jpg",
     location: "Wayanad, Kerala",
     timeAgo: "2 days ago",
-    content:
-      "⚠️ Alert: Leaf blight spotted in rice crops in our area. Take preventive measures immediately. Contact agriculture officer for fungicide recommendations.",
+    contentByLang: {
+      en: "⚠️ Alert: Leaf blight spotted in rice crops in our area. Take preventive measures immediately. Contact agriculture officer for fungicide recommendations.",
+      hi: "⚠️ सावधान: हमारे क्षेत्र में धान की फसल में पत्तों की झुलसा बीमारी देखी गई है। तुरंत बचाव के उपाय करें। फफूंदनाशी दवा के लिए कृषि अधिकारी से संपर्क करें।",
+      ml: "⚠️ അലർട്ട്: നമ്മുടെ പ്രദേശത്തെ നെൽവയലുകളിൽ ഇല ബ്ലൈറ്റ് കണ്ടിട്ടുണ്ട്. ഉടൻ പ്രതിരോധ നടപടികൾ സ്വീകരിക്കുക. ഫംഗിസൈഡ് ശുപാർശയ്ക്കായി കൃഷി ഓഫീസറെ ബന്ധപ്പെടുക.",
+      ta: "⚠️ எச்சரிக்கை: எங்கள் பகுதியில் நெல் வயலில் இலை நோய் (பிளைட்) கண்டறியப்பட்டுள்ளது. உடனே முன்னெச்சரிக்கை நடவடிக்கை எடுக்கவும். பூஞ்சை மருந்து ஆலோசனைக்கு விவசாய அதிகாரியை தொடர்பு கொள்ளவும்.",
+      te: "⚠️ హెచ్చరిక: మా ప్రాంతంలోని వరి పంటలో ఆకు బ్లైట్ వ్యాధి కనిపించింది. వెంటనే జాగ్రత్త చర్యలు తీసుకోండి. ఫంగిసైడ్ సూచన కోసం వ్యవసాయ అధికారిని సంప్రదించండి."
+    },
     likes: 18,
     comments: 12,
     isLiked: false,
@@ -96,10 +116,19 @@ const samplePosts: CommunityPost[] = [
 
 export function Community() {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [posts, setPosts] = useState<CommunityPost[]>(samplePosts)
   const [newPost, setNewPost] = useState({ content: "", category: "question" as const })
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false)
+
+  const postsForLanguage = useMemo(() => {
+    return posts.map((p) => ({
+      ...p,
+      // choose content for the selected language; fallback to English or first available
+      content:
+        p.contentByLang[language] ?? p.contentByLang.en ?? Object.values(p.contentByLang)[0] ?? "",
+    }))
+  }, [posts, language])
 
   const handleLike = (postId: string) => {
     setPosts((prev) =>
@@ -117,10 +146,12 @@ export function Community() {
     const post: CommunityPost = {
       id: Date.now().toString(),
       author: "You",
-      avatar: "/farmer-avatar.jpg",
+      avatar: "/placeholder-user.jpg",
       location: "Your Location",
       timeAgo: "Just now",
-      content: newPost.content,
+      contentByLang: {
+        [language]: newPost.content,
+      },
       likes: 0,
       comments: 0,
       isLiked: false,
@@ -194,7 +225,7 @@ export function Community() {
 
       {/* Posts Feed */}
       <div className="p-4 space-y-4 pb-20">
-        {posts.map((post, index) => (
+  {postsForLanguage.map((post, index) => (
           <Card key={post.id} className="bg-card border-border hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -227,7 +258,7 @@ export function Community() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              <p className="text-sm text-foreground mb-3 leading-relaxed">{post.content}</p>
+              <p className="text-sm text-foreground mb-3 leading-relaxed">{(post as any).content}</p>
 
               {post.image && (
                 <img
