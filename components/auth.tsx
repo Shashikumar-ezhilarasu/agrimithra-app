@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Globe } from "lucide-react"
 import dynamic from "next/dynamic"
-import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 
 const languages = [
@@ -25,7 +24,7 @@ export function Auth() {
 	const { setLanguage, t } = useLanguage()
 	const searchParams = useSearchParams()
 	const router = useRouter()
-	const { isSignedIn } = useAuth()
+	const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 	useEffect(() => {
 		setLanguage(selectedLanguage)
@@ -36,11 +35,8 @@ export function Auth() {
 		if (v === "sign-up" || v === "sign-in") setView(v)
 	}, [searchParams])
 
-	useEffect(() => {
-		if (isSignedIn) {
-			router.replace("/dashboard")
-		}
-	}, [isSignedIn, router])
+	// When Clerk is configured, Clerk widgets themselves handle redirects after auth.
+	// We intentionally avoid calling Clerk hooks here to prevent crashes when ClerkProvider is absent.
 
 	return (
 		<div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
@@ -74,7 +70,28 @@ export function Auth() {
 					</CardContent>
 				</Card>
 
-				{/* Clerk Auth UI */}
+				{/* If Clerk is not configured, render a friendly fallback instead of crashing */}
+				{!publishableKey ? (
+					<Card className="bg-card border-border shadow-lg">
+						<CardHeader className="text-center pb-0">
+							<CardTitle className="text-2xl font-bold text-foreground">
+								{t("signIn")}
+							</CardTitle>
+						</CardHeader>
+						<CardContent className="pt-4 text-center text-sm text-muted-foreground">
+							<p className="mb-3">Authentication is not configured for this deployment.</p>
+							<p className="mb-4">Add Clerk environment variables and redeploy to enable sign-in.</p>
+							<div className="flex items-center justify-center gap-2">
+								<button
+									className="px-4 py-2 rounded-md border"
+									onClick={() => router.push("/")}
+								>
+									{t("back")}
+								</button>
+							</div>
+						</CardContent>
+					</Card>
+				) : (
 				<Card className="bg-card border-border shadow-lg">
 					<CardHeader className="text-center pb-0">
 						<CardTitle className="text-2xl font-bold text-foreground">
@@ -97,6 +114,7 @@ export function Auth() {
 						)}
 					</CardContent>
 				</Card>
+				)}
 			</div>
 		</div>
 	)
