@@ -98,6 +98,16 @@ const translations = {
   verifyAndContinue: "Verify & Continue",
   changePhone: "Change Phone Number",
   termsAndPrivacy: "By continuing, you agree to our Terms of Service and Privacy Policy",
+    // Onboarding
+    onboarding_slide1_title: "Voice",
+    onboarding_slide1_desc:
+      "Ask by voice, text, or image. Get instant answers to your farming questions using voice commands, text messages, or by uploading photos of your crops.",
+    onboarding_slide2_title: "Crop Price",
+    onboarding_slide2_desc:
+      "Get crop prices and government schemes. Access real-time market rates, weather updates, and discover government schemes that benefit your farming business.",
+    onboarding_slide3_title: "Market Place",
+    onboarding_slide3_desc:
+      "Buy and sell in the farmers' marketplace. Connect with other farmers to buy and sell crops, equipment, and agri supplies in our trusted community market.",
   },
   hi: {
   geminiOverloaded: "Gemini सेवा व्यस्त है। पुनः प्रयास किया जा रहा है...",
@@ -177,6 +187,16 @@ const translations = {
   verifyAndContinue: "सत्यापित करें और जारी रखें",
   changePhone: "फ़ोन नंबर बदलें",
   termsAndPrivacy: "जारी रखते हुए, आप हमारी सेवा की शर्तों और गोपनीयता नीति से सहमत हैं",
+    // Onboarding
+    onboarding_slide1_title: "Voice",
+    onboarding_slide1_desc:
+      "आवाज़, टेक्स्ट या छवि द्वारा पूछें। वॉयस कमांड, टेक्स्ट मैसेज या अपनी फसलों की तस्वीरें अपलोड करके अपने कृषि संबंधी प्रश्नों के तुरंत उत्तर प्राप्त करें।",
+    onboarding_slide2_title: "Crop Price",
+    onboarding_slide2_desc:
+      "फसल की कीमतें और सरकारी योजनाएं प्राप्त करें। वास्तविक समय बाजार मूल्यों, मौसम अपडेट तक पहुंचें, और अपने कृषि व्यवसाय को लाभ पहुंचाने वाली सरकारी योजनाओं की खोज करें।",
+    onboarding_slide3_title: "Market Place",
+    onboarding_slide3_desc:
+      "किसान बाज़ार में खरीदें और बेचें। हमारे विश्वसनीय सामुदायिक बाज़ार में फसल, उपकरण और कृषि सामग्री खरीदने और बेचने के लिए अन्य किसानों से जुड़ें।",
   },
   ta: {
   geminiOverloaded: "Gemini அதிக பணி காரணமாக பதில் தர முடியவில்லை. மீண்டும் முயற்சிக்கிறது...",
