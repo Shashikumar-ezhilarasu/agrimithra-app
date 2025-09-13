@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { LanguageProvider } from "@/contexts/language-context"
+import { ClerkProvider } from "@clerk/nextjs"
 
 export const metadata: Metadata = {
   title: "v0 App",
@@ -19,13 +20,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="antialiased">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        <Suspense fallback={<div>Loading...</div>}>
-          <LanguageProvider>{children}</LanguageProvider>
-          <Analytics />
-        </Suspense>
-      </body>
-    </html>
+    <ClerkProvider afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+      <html lang="en" className="antialiased">
+        <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+          <Suspense fallback={<div>Loading...</div>}>
+            <LanguageProvider>
+              {children}
+              <Analytics />
+            </LanguageProvider>
+          </Suspense>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }

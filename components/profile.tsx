@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useLanguage } from "@/contexts/language-context"
+import { useUser, UserButton, SignOutButton } from "@clerk/nextjs";
 import {
   ArrowLeft,
   Globe,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react"
 
 export function Profile() {
+  const { user } = useUser();
   const router = useRouter()
   const { language, setLanguage, t } = useLanguage()
   const [notifications, setNotifications] = useState({
@@ -54,13 +56,13 @@ export function Profile() {
   ]
 
   const farmerProfile = {
-    name: "Ravi Kumar",
-    phone: "+91 9876543210",
-    email: "ravi.kumar@email.com",
+    name: user?.fullName || "Anonymous",
+    phone: user?.primaryPhoneNumber?.toString() || "N/A",
+    email: user?.primaryEmailAddress?.toString() || "N/A",
     location: t("location_kochi"),
     farmSize: `5.2 ${t("acres")}`,
     cropsGrown: [t("rice"), t("coconut"), t("pepper"), t("cardamom")],
-    joinedDate: t("joined_march_2024"),
+    joinedDate: user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : t("unknown"),
     totalQueries: 47,
     savedAnswers: 12,
   }
@@ -148,7 +150,7 @@ export function Profile() {
           <CardContent className="p-6">
             <div className="flex items-start space-x-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src="/farmer-avatar.jpg" alt={farmerProfile.name} />
+                <AvatarImage src={user?.imageUrl || "/default-avatar.jpg"} alt={farmerProfile.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {farmerProfile.name
                     .split(" ")
@@ -159,9 +161,7 @@ export function Profile() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xl font-bold text-foreground">{farmerProfile.name}</h2>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="h-4 w-4" />
-                  </Button>
+                  <UserButton />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-muted-foreground">
@@ -347,14 +347,18 @@ export function Profile() {
         </Card>
 
         {/* Logout Button */}
-        <Button
-          onClick={handleLogout}
-          variant="outline"
-          className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          {t("logout")}
-        </Button>
+        <SignOutButton signOutOptions={{ sessionId: undefined }} redirectUrl="/auth">
+          <Button
+            variant="outline"
+            className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            {t("logout")}
+          </Button>
+        </SignOutButton>
+        
+        {/* Legacy local cleanup handler retained as fallback */}
+        {/* <Button onClick={handleLogout} variant="outline" className="w-full">{t("logout")}</Button> */}
       </div>
     </div>
   )
