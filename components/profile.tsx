@@ -151,7 +151,7 @@ export function Profile() {
           <CardContent className="p-6">
             <div className="flex items-start space-x-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={user?.imageUrl || "/default-avatar.jpg"} alt={farmerProfile.name} />
+                <AvatarImage src={user?.imageUrl || "/placeholder-user.jpg"} alt={farmerProfile.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {farmerProfile.name
                     .split(" ")
