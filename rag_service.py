@@ -17,6 +17,7 @@ import logging
 import random
 from datetime import datetime
 from pathlib import Path
+from googletrans import Translator  # For translation support
 
 # Conditionally import SentenceTransformer to handle compatibility issues
 try:
@@ -86,18 +87,20 @@ DOCUMENTS = [
 EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"  # Better multilingual support
 GENERATOR_MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.3"
 
+# Initialize the translator
+translator = Translator()
+
 class RAGChatbot:
     def __init__(self, embedding_model_name=EMBEDDING_MODEL_NAME, generator_model_name=GENERATOR_MODEL_NAME):
         try:
             if SENTENCE_TRANSFORMER_AVAILABLE:
                 self.embedding_model = SentenceTransformer(embedding_model_name)
             else:
-                # Use a simple fallback method for embeddings (not as effective)
                 self.embedding_model = None
-                
-            # We'll avoid using the Transformers pipeline due to compatibility issues
+
             self.generator = None
             self.index = None
+            self.translator = translator  # Add translator instance
             self.doc_chunks = []
             self.doc_metadata = []
             self.init_successful = True
