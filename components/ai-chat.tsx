@@ -78,7 +78,14 @@ export function AIChat() {
         if (response.ok) {
           setGeminiStatus("online")
         } else {
-          setGeminiStatus("offline")
+          // Check if this is a quota error but we have multiple keys available
+          const errorData = await response.json()
+          if (response.status === 429 && !errorData.allKeysFailed) {
+            // We have more keys to try
+            setGeminiStatus("online")
+          } else {
+            setGeminiStatus("offline")
+          }
         }
       } catch (error) {
         setGeminiStatus("offline")
@@ -267,13 +274,31 @@ export function AIChat() {
     setInputText("")
     setIsTyping(true)
     setShowSuggestions(false)
+    
+    // Ensure we're using the current language from the context
+    // This ensures responses match the language the user has selected
 
     let aiText = ""
     if (model === "gemini") {
       let retries = 0
       const maxRetries = 3
       let errorMsg = ""
-      const prompt = `Reply in ${language}. Begin with: 'To answer your question about ${inputText},' and then provide a longer, conversational, helpful response for Indian farmers.`
+      // Create a language-specific prompt
+      const languageNames = {
+        'en': 'English',
+        'hi': 'Hindi',
+        'ta': 'Tamil',
+        'ml': 'Malayalam',
+        'kn': 'Kannada',
+        'te': 'Telugu'
+      };
+      
+      const langName = languageNames[language as keyof typeof languageNames] || 'English';
+      const prompt = `You are a helpful farming assistant for Indian farmers. The user's query is in ${langName}. 
+YOUR RESPONSE MUST BE ENTIRELY IN ${langName} ONLY. DO NOT USE ANY OTHER LANGUAGE.
+Query: ${inputText}
+
+Give a detailed, conversational, and helpful response for farmers.`;
       while (retries < maxRetries) {
         try {
           const response = await fetch("/api/gemini", {
@@ -282,29 +307,57 @@ export function AIChat() {
             body: JSON.stringify({ prompt }),
           })
           const data = await response.json()
-          aiText = data?.result
-          if (response.status === 503) {
-            errorMsg = t("geminiOverloaded") || "Gemini is overloaded. Retrying..."
+          
+          // Check for successful response
+          if (response.ok && data?.result) {
+            aiText = data.result;
+            break;
+          }
+          
+          // Handle different error cases
+          if (response.status === 429) {
+            // Quota exceeded error - our API handler will try multiple keys
+            if (data?.allKeysFailed) {
+              // All API keys have reached quota limits
+              aiText = t("allKeysExceeded") || "All available API keys have reached their quota limits. Please try again later.";
+              break;
+            } else {
+              // Some keys may still work - the handler will try another key
+              errorMsg = t("geminiOverloaded") || "Switching to another API key...";
+              setMessages((prev) => [...prev, {
+                id: (Date.now() + 1).toString(),
+                type: "ai",
+                content: errorMsg,
+                timestamp: new Date(),
+              }]);
+              retries++;
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              continue;
+            }
+          } else if (response.status === 503) {
+            // Service unavailable
+            errorMsg = t("geminiOverloaded") || "Gemini is overloaded. Retrying...";
             setMessages((prev) => [...prev, {
               id: (Date.now() + 1).toString(),
               type: "ai",
               content: errorMsg,
               timestamp: new Date(),
-            }])
-            retries++
-            await new Promise((resolve) => setTimeout(resolve, 2000))
-            continue
+            }]);
+            retries++;
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            continue;
           }
-          if ((!aiText || aiText.length < 5) && data?.error) {
-            aiText = `Gemini Error: ${data.error}`
+          
+          // General error handling
+          if (data?.error) {
+            aiText = `Gemini Error: ${data.error}`;
+          } else {
+            aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later.";
           }
-          if (!aiText || aiText.length < 5) {
-            aiText = t("aiError") || "Sorry, I couldn't get an answer from Gemini. Please try again later."
-          }
-          break
+          break;
         } catch (err) {
-          aiText = `Gemini Error: ${err instanceof Error ? err.message : String(err)}`
-          break
+          aiText = `Gemini Error: ${err instanceof Error ? err.message : String(err)}`;
+          break;
         }
       }
     } else if (model === "rag") {

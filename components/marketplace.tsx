@@ -26,6 +26,7 @@ import {
   Tractor,
   Users,
 } from "lucide-react"
+import { MultiLanguageProductCard } from "@/components/ui/product-listing"
 
 interface MarketplaceItem {
   id: string
@@ -40,6 +41,12 @@ interface MarketplaceItem {
   phone: string
   postedDate: string
   isLiked?: boolean
+  translations?: {
+    [lang: string]: {
+      title: string
+      description: string
+    }
+  }
 }
 
 const sampleItems: MarketplaceItem[] = [
@@ -55,6 +62,24 @@ const sampleItems: MarketplaceItem[] = [
     description: "High quality basmati rice, freshly harvested. Organic farming methods used.",
     phone: "+91 9876543210",
     postedDate: "2 days ago",
+    translations: {
+      hi: {
+        title: "ताज़ा चावल - प्रीमियम गुणवत्ता",
+        description: "उच्च गुणवत्ता वाला बासमती चावल, ताज़ा कटाई किया गया। जैविक खेती के तरीके अपनाए गए।"
+      },
+      ta: {
+        title: "புதிய அரிசி - உயர் தரம்",
+        description: "உயர் தர பாஸ்மதி அரிசி, புதியதாக அறுவடை செய்யப்பட்டது. இயற்கை வேளாண்மை முறைகள் பயன்படுத்தப்பட்டுள்ளன."
+      },
+      ml: {
+        title: "പുതിയ അരി - പ്രീമിയം ഗുണമേന്മ",
+        description: "ഉയർന്ന ഗുണമേന്മയുള്ള ബാസ്മതി അരി, പുതുതായി കൊയ്തെടുത്തത്. ജൈവ കൃഷി രീതികൾ ഉപയോഗിച്ചിട്ടുണ്ട്."
+      },
+      te: {
+        title: "తాజా బియ్యం - ప్రీమియం నాణ్యత",
+        description: "అత్యున్నత నాణ్యత గల బాస్మతి బియ్యం, తాజాగా కోయబడింది. సేంద్రియ వ్యవసాయ పద్ధతులు ఉపయోగించబడ్డాయి."
+      }
+    }
   },
   {
     id: "2",
@@ -68,6 +93,24 @@ const sampleItems: MarketplaceItem[] = [
     description: "Well-maintained tractor available for daily rent. Includes operator if needed.",
     phone: "+91 9876543211",
     postedDate: "1 day ago",
+    translations: {
+      hi: {
+        title: "किराये पर ट्रैक्टर - महिंद्रा 575",
+        description: "अच्छी तरह से मेंटेन किया गया ट्रैक्टर दैनिक किराये पर उपलब्ध। आवश्यकता होने पर ऑपरेटर सहित।"
+      },
+      ta: {
+        title: "வாடகைக்கு டிராக்டர் - மஹிந்திரா 575",
+        description: "நன்கு பராமரிக்கப்பட்ட டிராக்டர் தினசரி வாடகைக்கு கிடைக்கும். தேவையெனில் ஓட்டுநர் உடன் வழங்கப்படும்."
+      },
+      ml: {
+        title: "ട്രാക്ടർ വാടകയ്ക്ക് - മഹീന്ദ്ര 575",
+        description: "നന്നായി പരിപാലിച്ച ട്രാക്ടർ ദിവസവാടകയ്ക്ക് ലഭ്യമാണ്. ആവശ്യമെങ്കിൽ ഡ്രൈവർ ഉൾപ്പെടും."
+      },
+      te: {
+        title: "అద్దెకు ట్రాక్టర్ - మహీంద్రా 575",
+        description: "బాగా సంరక్షించిన ట్రాక్టర్ రోజువారీ అద్దెకు అందుబాటులో ఉంది. అవసరమైతే డ్రైవర్ సహా."
+      }
+    }
   },
   {
     id: "3",
@@ -82,6 +125,24 @@ const sampleItems: MarketplaceItem[] = [
     phone: "+91 9876543212",
     postedDate: "3 hours ago",
     isLiked: true,
+    translations: {
+      hi: {
+        title: "ऑर्गेनिक टमाटर - थोक बिक्री",
+        description: "ताज़े ऑर्गेनिक टमाटर, थोक खरीदारों के लिए उत्तम। न्यूनतम ऑर्डर 100 किलो।"
+      },
+      ta: {
+        title: "ஆர்கானிக் தக்காளி - மொத்த விற்பனை",
+        description: "புதிய இயற்கை தக்காளிகள், மொத்தமாக வாங்குபவர்களுக்கு சிறந்தது. குறைந்தபட்ச ஆர்டர் 100 கிலோ."
+      },
+      ml: {
+        title: "ഓർഗാനിക് തക്കാളി - മൊത്തവില്പന",
+        description: "പുതിയ ഓർഗാനിക് തക്കാളി, മൊത്തവ്യാപാരികൾക്ക് അനുയോജ്യം. കുറഞ്ഞത് 100 കിലോ ഓർഡർ വേണം."
+      },
+      te: {
+        title: "ఆర్గానిక్ టమోటాలు - బల్క్ సేల్",
+        description: "తాజా ఆర్గానిక్ టమోటాలు, హోల్‌సేల్ కొనుగోలుదారులకు అనువైనవి. కనీస ఆర్డర్ 100 కిలోలు."
+      }
+    }
   },
   {
     id: "4",
@@ -95,6 +156,24 @@ const sampleItems: MarketplaceItem[] = [
     description: "High yield hybrid corn seeds with 85% germination rate. Disease resistant variety.",
     phone: "+91 9876543213",
     postedDate: "1 week ago",
+    translations: {
+      hi: {
+        title: "हाइब्रिड मक्का बीज",
+        description: "85% अंकुरण दर वाले उच्च उपज हाइब्रिड मक्का बीज। रोग प्रतिरोधी किस्म।"
+      },
+      ta: {
+        title: "இணை வகை சோளம் விதைகள்",
+        description: "85% முளைத்தளவு கொண்ட அதிக மகசூல் தரும் இணை வகை சோளம் விதைகள். நோய் எதிர்ப்பு கொண்ட சிறப்பு வகை."
+      },
+      ml: {
+        title: "ഹൈബ്രിഡ് ചോളം വിത്തുകൾ",
+        description: "85% മുളയ്ക്കൽ ശേഷിയുള്ള ഉയർന്ന വിളവെടുപ്പ് ഹൈബ്രിഡ് ചോളം വിത്തുകൾ. രോഗപ്രതിരോധ ശേഷിയുള്ള ഇനം."
+      },
+      te: {
+        title: "హైబ్రిడ్ మొక్కజొన్న విత్తనాలు",
+        description: "85% మొలక శాతం కలిగిన అధిక దిగుబడి హైబ్రిడ్ మొక్కజొన్న విత్తనాలు. రోగనిరోధక రకం."
+      }
+    }
   },
 ]
 
@@ -241,79 +320,22 @@ export function Marketplace() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredItems.map((item, index) => (
-              <Card
+              <div 
                 key={item.id}
-                className="bg-card hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] border-border"
+                className="animate-fadeIn"
                 style={{
                   animationDelay: `${index * 100}ms`,
-                  animation: "fadeInUp 0.5s ease-out forwards",
                 }}
               >
-                <CardContent className="p-0">
-                  {/* Image */}
-                  <div className="relative">
-                    <img
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.title}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                    />
-                    <Badge
-                      className={`absolute top-2 left-2 ${item.type === "buy" ? "bg-primary" : "bg-accent"} text-white`}
-                    >
-                      {item.type === "buy" ? "For Sale" : "For Rent"}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleLike(item.id)}
-                      className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-                    >
-                      <Heart
-                        className={`h-4 w-4 ${item.isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"}`}
-                      />
-                    </Button>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground text-sm line-clamp-1">{item.title}</h3>
-                        <p className="text-lg font-bold text-primary">{item.price}</p>
-                      </div>
-                      <div className="flex items-center text-muted-foreground">{getCategoryIcon(item.category)}</div>
-                    </div>
-
-                    <div className="flex items-center text-xs text-muted-foreground mb-2">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {item.location}
-                    </div>
-
-                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{item.description}</p>
-
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-muted-foreground">
-                        By {item.seller} • {item.postedDate}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 mt-3">
-                      <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <Phone className="h-3 w-3 mr-1" />
-                        Call
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1 bg-transparent border-border">
-                        <MessageCircle className="h-3 w-3 mr-1" />
-                        Chat
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Share2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <MultiLanguageProductCard
+                  product={{
+                    ...item,
+                    isLiked: item.isLiked
+                  }}
+                  onClickContact={() => window.alert(`Calling ${item.phone}`)}
+                  onClickChat={() => window.alert(`Chat with ${item.seller}`)}
+                />
+              </div>
             ))}
           </div>
         )}
