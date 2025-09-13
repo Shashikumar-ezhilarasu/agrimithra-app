@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Globe } from "lucide-react"
-import { SignIn, SignUp, useAuth } from "@clerk/nextjs"
+import dynamic from "next/dynamic"
+import { useAuth } from "@clerk/nextjs"
 import { useRouter, useSearchParams } from "next/navigation"
 
 const languages = [
@@ -82,9 +83,17 @@ export function Auth() {
 					</CardHeader>
 					<CardContent className="pt-2">
 						{view === "sign-in" ? (
-							<SignIn appearance={{ elements: { card: "shadow-none border-0 bg-transparent" } }} afterSignInUrl="/dashboard" signUpUrl="/auth?view=sign-up" />
+							<SignInNoSSR
+								appearance={{ elements: { card: "shadow-none border-0 bg-transparent" } }}
+								afterSignInUrl="/dashboard"
+								signUpUrl="/auth?view=sign-up"
+							/>
 						) : (
-							<SignUp appearance={{ elements: { card: "shadow-none border-0 bg-transparent" } }} afterSignUpUrl="/dashboard" signInUrl="/auth?view=sign-in" />
+							<SignUpNoSSR
+								appearance={{ elements: { card: "shadow-none border-0 bg-transparent" } }}
+								afterSignUpUrl="/dashboard"
+								signInUrl="/auth?view=sign-in"
+							/>
 						)}
 					</CardContent>
 				</Card>
@@ -92,3 +101,11 @@ export function Auth() {
 		</div>
 	)
 }
+
+// Dynamically import Clerk widgets client-only to avoid SSR errors when env is missing
+const SignInNoSSR = dynamic(async () => (await import("@clerk/nextjs")).SignIn, {
+  ssr: false,
+})
+const SignUpNoSSR = dynamic(async () => (await import("@clerk/nextjs")).SignUp, {
+  ssr: false,
+})

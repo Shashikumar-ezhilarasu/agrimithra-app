@@ -14,23 +14,36 @@ export const metadata: Metadata = {
   generator: "v0.app",
 }
 
+// Force dynamic rendering to avoid prerender-time crashes when env vars are missing
+export const dynamic = "force-dynamic"
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   return (
-    <ClerkProvider afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
-      <html lang="en" className="antialiased">
-        <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-          <Suspense fallback={<div>Loading...</div>}>
-            <LanguageProvider>
-              {children}
-              <Analytics />
-            </LanguageProvider>
-          </Suspense>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className="antialiased">
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        <Suspense fallback={<div>Loading...</div>}>
+          <LanguageProvider>
+            {publishableKey ? (
+              <ClerkProvider
+                publishableKey={publishableKey}
+                afterSignInUrl="/dashboard"
+                afterSignUpUrl="/dashboard"
+              >
+                {children}
+              </ClerkProvider>
+            ) : (
+              // Render without Clerk to prevent build-time crashes if env is not set
+              children
+            )}
+            <Analytics />
+          </LanguageProvider>
+        </Suspense>
+      </body>
+    </html>
   )
 }

@@ -10,7 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useLanguage } from "@/contexts/language-context"
-import { useUser, UserButton, SignOutButton } from "@clerk/nextjs";
+import dynamic from "next/dynamic"
+import { useUser } from "@clerk/nextjs";
 import {
   ArrowLeft,
   Globe,
@@ -161,7 +162,7 @@ export function Profile() {
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-xl font-bold text-foreground">{farmerProfile.name}</h2>
-                  <UserButton />
+                  <UserButtonNoSSR />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-muted-foreground">
@@ -347,7 +348,7 @@ export function Profile() {
         </Card>
 
         {/* Logout Button */}
-        <SignOutButton signOutOptions={{ sessionId: undefined }} redirectUrl="/auth">
+  <SignOutButtonNoSSR signOutOptions={{ sessionId: undefined }} redirectUrl="/auth">
           <Button
             variant="outline"
             className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
@@ -355,7 +356,7 @@ export function Profile() {
             <LogOut className="h-4 w-4 mr-2" />
             {t("logout")}
           </Button>
-        </SignOutButton>
+  </SignOutButtonNoSSR>
         
         {/* Legacy local cleanup handler retained as fallback */}
         {/* <Button onClick={handleLogout} variant="outline" className="w-full">{t("logout")}</Button> */}
@@ -363,3 +364,11 @@ export function Profile() {
     </div>
   )
 }
+
+// Client-only Clerk components to avoid SSR in static export
+const UserButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).UserButton, {
+  ssr: false,
+})
+const SignOutButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).SignOutButton, {
+  ssr: false,
+})
