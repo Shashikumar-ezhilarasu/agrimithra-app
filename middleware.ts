@@ -1,17 +1,28 @@
-import { clerkMiddleware } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest, type NextFetchEvent } from 'next/server';
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth();
-  // Allow Clerk OAuth callback to pass through
-  if (req.nextUrl.pathname.startsWith('/auth/sso-callback')) {
-    return NextResponse.next();
+export async function middleware(req: NextRequest, ev: NextFetchEvent) {
+  const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && !!process.env.CLERK_SECRET_KEY
+
+  // If Clerk keys are missing, skip auth logic to avoid runtime failures on Edge.
+  if (!hasClerk) {
+    return NextResponse.next()
   }
-  if (userId && req.nextUrl.pathname.startsWith('/auth')) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
-  }
-  return NextResponse.next();
-});
+
+  const { clerkMiddleware } = await import('@clerk/nextjs/server')
+
+  const handler = clerkMiddleware(async (auth, request) => {
+    const { userId } = await auth()
+    // Allow Clerk OAuth callback to pass through
+    if (request.nextUrl.pathname.startsWith('/auth/sso-callback')) {
+      return NextResponse.next()
+    }
+    if (userId && request.nextUrl.pathname.startsWith('/auth')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    return NextResponse.next()
+  })
+  return handler(req, ev)
+}
 
 export const config = {
   matcher: [
