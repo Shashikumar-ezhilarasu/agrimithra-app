@@ -2,6 +2,10 @@
 
 AgriMithra is an AI-powered agricultural assistant designed to help farmers with crop disease diagnosis, market price information, weather forecasts, government schemes, fertilizer recommendations, and pest control methods.
 
+
+https://github.com/user-attachments/assets/df1167b4-2e00-4c6c-8372-a0c3d2b8d4fb
+
+
 ## Features
 
 - **Dual-Model Chat System:**
