@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { LanguageProvider } from "@/contexts/language-context"
-import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs"
+import { ClerkProvider, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs"
 
 export const metadata: Metadata = {
   title: "AgriMithra - Agricultural Assistant",
@@ -35,7 +35,7 @@ export default function RootLayout({
                 signUpFallbackRedirectUrl="/dashboard"
               >
                 <header className="flex justify-end items-center p-4 gap-4 h-16 border-b shadow-sm">
-                  <Show when="signed-out">
+                  <SignedOut>
                     <SignInButton mode="modal">
                       <button className="bg-[#6c47ff] text-white rounded-md font-medium text-sm h-10 px-4 cursor-pointer hover:bg-[#5b3ce0] transition-colors">
                         Sign In
@@ -46,10 +46,10 @@ export default function RootLayout({
                         Sign Up
                       </button>
                     </SignUpButton>
-                  </Show>
-                  <Show when="signed-in">
+                  </SignedOut>
+                  <SignedIn>
                     <UserButton afterSignOutUrl="/" />
-                  </Show>
+                  </SignedIn>
                 </header>
                 <main>{children}</main>
               </ClerkProvider>
