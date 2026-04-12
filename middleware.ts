@@ -1,46 +1,28 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-// Define public routes
-const isPublicRoute = createRouteMatcher([
-  '/', 
-  '/auth(.*)', 
-  '/api/posts(.*)', 
-  '/community(.*)', 
-  '/marketplace(.*)',
-  '/api/gemini(.*)',
-  '/api/chat-history(.*)'
+// Define exactly which routes NEED protection, rather than blacklisting public ones.
+// This is much safer and prevents accidental lockouts or edge runtime crashes.
+const isProtectedRoute = createRouteMatcher([
+  '/dashboard(.*)',
+  '/profile(.*)',
 ])
 
-// Only initialize Clerk's middleware if the keys are actually present.
-const hasClerkKeys = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && !!process.env.CLERK_SECRET_KEY;
-
-let myClerkMiddleware: any;
-
-if (hasClerkKeys) {
-  myClerkMiddleware = clerkMiddleware((auth, req) => {
-    if (!isPublicRoute(req)) {
-      auth().protect()
-    }
-  });
-}
-
-export default function middleware(req: NextRequest, event: any) {
-  // Defensive check: If keys are missing (like in Vercel before environment variables are set up),
-  // totally bypass Clerk to prevent MIDDLEWARE_INVOCATION_FAILED.
-  if (!hasClerkKeys) {
-    console.warn("Bypassing Clerk Auth: Missing CLERK_SECRET_KEY or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
-    return NextResponse.next();
+export default clerkMiddleware((auth, req) => {
+  // If the environment is missing keys, just bypass to prevent Vercel 500 error
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || !process.env.CLERK_SECRET_KEY) {
+    return NextResponse.next()
   }
-  
-  // Otherwise, run the real Clerk middleware
-  return myClerkMiddleware(req, event);
-}
+
+  // Only protect specific private routes
+  if (isProtectedRoute(req)) {
+    auth().protect()
+  }
+})
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
+    // Skip Next.js internals and all static files, unless found in search params
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Always run for API routes
     '/(api|trpc)(.*)',
