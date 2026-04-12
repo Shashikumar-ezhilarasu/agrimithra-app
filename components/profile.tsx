@@ -21,7 +21,6 @@ import {
   HelpCircle,
   Info,
   LogOut,
-  Edit,
   MapPin,
   Wheat,
   Phone,
@@ -33,7 +32,11 @@ import {
   Shield,
 } from "lucide-react"
 
-export function Profile() {
+// Client-only Clerk components
+const UserButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).UserButton, { ssr: false })
+const SignOutButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).SignOutButton, { ssr: false })
+
+function ProfileContent() {
   const { user } = useUser();
   const router = useRouter()
   const { language, setLanguage, t } = useLanguage()
@@ -68,11 +71,6 @@ export function Profile() {
     savedAnswers: 12,
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem("agrimithra-language")
-    router.push("/")
-  }
-
   const handleLanguageChange = (newLanguage: string) => {
     setLanguage(newLanguage)
   }
@@ -80,8 +78,8 @@ export function Profile() {
   const settingsItems = [
     {
       icon: Globe,
-  title: t("languageSettings"),
-  description: t("changeAppLanguage"),
+      title: t("languageSettings"),
+      description: t("changeAppLanguage"),
       action: (
         <Select value={language} onValueChange={handleLanguageChange}>
           <SelectTrigger className="w-32">
@@ -99,35 +97,35 @@ export function Profile() {
     },
     {
       icon: Bell,
-  title: t("notifications"),
-  description: t("manageNotifications"),
+      title: t("notifications"),
+      description: t("manageNotifications"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: Wifi,
-  title: t("nfcManagement"),
-  description: t("offlineAccessSettings"),
+      title: t("nfcManagement"),
+      description: t("offlineAccessSettings"),
       action: <Switch checked={nfcEnabled} onCheckedChange={setNfcEnabled} />,
     },
     {
       icon: Bookmark,
-  title: t("savedQueries"),
-  description: `${farmerProfile.savedAnswers} ${t("savedAnswers")}`,
+      title: t("savedQueries"),
+      description: `${farmerProfile.savedAnswers} ${t("savedAnswers")}`,
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: HelpCircle,
-  title: t("support"),
-  description: t("getHelpContactUs"),
+      title: t("support"),
+      description: t("getHelpContactUs"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
     {
       icon: Info,
-  title: t("aboutAgriMithra"),
-  description: t("appInfoTeamDetails"),
+      title: t("aboutAgriMithra"),
+      description: t("appInfoTeamDetails"),
       action: <ChevronRight className="h-4 w-4 text-muted-foreground" />,
       onClick: () => {},
     },
@@ -154,9 +152,9 @@ export function Profile() {
                 <AvatarImage src={user?.imageUrl || "/placeholder-user.jpg"} alt={farmerProfile.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
                   {farmerProfile.name
-                    .split(" ")
+                    ?.split(" ")
                     .map((n) => n[0])
-                    .join("")}
+                    .join("") || "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -181,7 +179,6 @@ export function Profile() {
               </div>
             </div>
 
-            {/* Contact Info */}
             <div className="mt-4 pt-4 border-t border-border/50">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="flex items-center text-muted-foreground">
@@ -195,7 +192,6 @@ export function Profile() {
               </div>
             </div>
 
-            {/* Crops Grown */}
             <div className="mt-4">
               <p className="text-sm font-medium text-foreground mb-2">{t("cropsGrown")}</p>
               <div className="flex flex-wrap gap-2">
@@ -207,7 +203,6 @@ export function Profile() {
               </div>
             </div>
 
-            {/* Stats */}
             <div className="mt-4 pt-4 border-t border-border/50">
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
@@ -250,105 +245,7 @@ export function Profile() {
           </CardContent>
         </Card>
 
-        {/* Notification Settings Dialog */}
-        <Dialog>
-          <DialogTrigger asChild>
-            <div className="hidden">Notifications</div>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t("notificationSettings")}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {Object.entries(notifications).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium capitalize">{t(key + "Label")}</p>
-                    <p className="text-sm text-muted-foreground">{t(key + "Desc")}</p>
-                  </div>
-                  <Switch
-                    checked={value}
-                    onCheckedChange={(checked) => setNotifications({ ...notifications, [key]: checked })}
-                  />
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Support Options */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("helpSupport")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <MessageCircle className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">{t("liveChatSupport")}</p>
-                  <p className="text-xs text-muted-foreground">{t("chatWithSupportTeam")}</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <FileText className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">{t("faqGuides")}</p>
-                  <p className="text-xs text-muted-foreground">{t("commonQuestionsTutorials")}</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Shield className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">{t("privacyTerms")}</p>
-                  <p className="text-xs text-muted-foreground">{t("privacyPolicyTerms")}</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* About Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("aboutAgriMithra")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                {t("aboutAgriMithraDesc")}
-              </p>
-              <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>{t("version")}</span>
-                <span className="font-medium">1.0.0</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>{t("lastUpdated")}</span>
-                <span className="font-medium">September 2025</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-t border-border">
-                <span>{t("developer")}</span>
-                <span className="font-medium">{t("developerName")}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Logout Button */}
-  <SignOutButtonNoSSR signOutOptions={{ sessionId: undefined }} redirectUrl="/auth">
+        <SignOutButtonNoSSR signOutOptions={{ sessionId: undefined }} redirectUrl="/auth">
           <Button
             variant="outline"
             className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
@@ -356,19 +253,23 @@ export function Profile() {
             <LogOut className="h-4 w-4 mr-2" />
             {t("logout")}
           </Button>
-  </SignOutButtonNoSSR>
-        
-        {/* Legacy local cleanup handler retained as fallback */}
-        {/* <Button onClick={handleLogout} variant="outline" className="w-full">{t("logout")}</Button> */}
+        </SignOutButtonNoSSR>
       </div>
     </div>
   )
 }
 
-// Client-only Clerk components to avoid SSR in static export
-const UserButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).UserButton, {
-  ssr: false,
-})
-const SignOutButtonNoSSR = dynamic(async () => (await import("@clerk/nextjs")).SignOutButton, {
-  ssr: false,
-})
+export function Profile() {
+  const hasClerkKey = typeof window !== 'undefined' ? !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY : false;
+  
+  if (!hasClerkKey) {
+    return (
+      <div className="p-10 text-center">
+        <h2 className="text-xl font-bold mb-4">Setup Required</h2>
+        <p className="text-muted-foreground">Please configure your Clerk API keys in .env.local to access the profile.</p>
+      </div>
+    );
+  }
+
+  return <ProfileContent />;
+}

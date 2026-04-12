@@ -6,15 +6,15 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { LanguageProvider } from "@/contexts/language-context"
-import { ClerkProvider } from "@clerk/nextjs"
+import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs"
 
 export const metadata: Metadata = {
-  title: "v0 App",
-  description: "Created with v0",
+  title: "AgriMithra - Agricultural Assistant",
+  description: "AI-powered agricultural assistant for farmers",
   generator: "v0.app",
 }
 
-// Force dynamic rendering to avoid prerender-time crashes when env vars are missing
+// Force dynamic rendering to avoid prerender-time crashes
 export const dynamic = "force-dynamic"
 
 export default function RootLayout({
@@ -23,6 +23,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
   return (
     <html lang="en" className="antialiased">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
@@ -30,15 +31,38 @@ export default function RootLayout({
           <LanguageProvider>
             {publishableKey ? (
               <ClerkProvider
-                publishableKey={publishableKey}
-                afterSignInUrl="/dashboard"
-                afterSignUpUrl="/dashboard"
+                signInFallbackRedirectUrl="/dashboard"
+                signUpFallbackRedirectUrl="/dashboard"
               >
-                {children}
+                <header className="flex justify-end items-center p-4 gap-4 h-16 border-b shadow-sm">
+                  <Show when="signed-out">
+                    <SignInButton mode="modal">
+                      <button className="bg-[#6c47ff] text-white rounded-md font-medium text-sm h-10 px-4 cursor-pointer hover:bg-[#5b3ce0] transition-colors">
+                        Sign In
+                      </button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <button className="border border-[#6c47ff] text-[#6c47ff] rounded-md font-medium text-sm h-10 px-4 cursor-pointer hover:bg-slate-50 transition-colors">
+                        Sign Up
+                      </button>
+                    </SignUpButton>
+                  </Show>
+                  <Show when="signed-in">
+                    <UserButton afterSignOutUrl="/" />
+                  </Show>
+                </header>
+                <main>{children}</main>
               </ClerkProvider>
             ) : (
-              // Render without Clerk to prevent build-time crashes if env is not set
-              children
+              <>
+                <header className="flex justify-between items-center p-4 h-16 border-b bg-amber-50 text-amber-800">
+                  <div className="font-semibold px-4 text-xl">AgriMithra</div>
+                  <div className="text-sm px-4">
+                    ⚠️ <strong>Clerk setup needed:</strong> Please add your <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> and <code>CLERK_SECRET_KEY</code> to <code>.env.local</code>.
+                  </div>
+                </header>
+                <main>{children}</main>
+              </>
             )}
             <Analytics />
           </LanguageProvider>
