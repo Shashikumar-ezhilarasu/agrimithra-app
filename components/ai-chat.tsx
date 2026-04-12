@@ -424,202 +424,346 @@ Give a detailed, conversational, and helpful response for farmers.`;
     }, 100)
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = false
+      recognitionRef.current.interimResults = false
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript
+        setInputText(transcript)
+        setIsListening(false)
+      }
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error)
+        setIsListening(status => {
+           if (status) return false;
+           return status;
+        })
+      }
+    }
+  }, [])
+
+  const startVoiceCapture = () => {
+    if (recognitionRef.current && !isListening) {
+      setIsListening(true)
+      recognitionRef.current.start()
+    } else if (isListening) {
+      recognitionRef.current.stop()
+      setIsListening(false)
+    } else {
+      alert("Speech recognition is not supported in this browser.")
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const url = event.target?.result as string
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          type: "user",
+          content: "📷 Analysis request for: " + file.name,
+          timestamp: new Date(),
+          mediaType: "image",
+          mediaUrl: url,
+        }
+        setMessages((prev) => [...prev, userMessage])
+        setIsTyping(true)
+
+        try {
+          // 1. Try Local ML prediction first
+          let localPrediction = null;
+          try {
+            const mlRes = await fetch("http://localhost:8001/predict", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ image: url }),
+            });
+            if (mlRes.ok) {
+              localPrediction = await mlRes.json();
+            }
+          } catch (e) {
+            console.warn("Local ml_service not available, falling back to Gemini.");
+          }
+
+          // 2. Decide: Use local result or fallback to Gemini
+          // Fail back if no local ml, error status, or low confidence (< 0.7)
+          if (!localPrediction || localPrediction.status === "error" || localPrediction.confidence < 0.7) {
+            console.log("Local ML uncertain or unavailable. Requesting Gemini analysis...");
+            const response = await fetch("/api/gemini", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                prompt: `Analyze this image for agricultural diseases. (Local ML predicted: ${localPrediction?.label || 'Unknown'} with ${Math.round((localPrediction?.confidence || 0) * 100)}% confidence). Please provide an expert diagnosis and mitigation projects.`, 
+                imageData: url 
+              }),
+            })
+            const data = await response.json()
+            if (response.ok && data.result) {
+              setMessages((prev) => [...prev, {
+                id: (Date.now() + 1).toString(),
+                type: "ai",
+                content: data.result,
+                timestamp: new Date(),
+              }])
+            }
+          } else {
+             // 3. Local ML succeeded with high confidence
+             setMessages((prev) => [...prev, {
+                id: (Date.now() + 1).toString(),
+                type: "ai",
+                content: `🌱 **Local ML Prediction**: ${localPrediction.label.replace(/_/g, ' ')}\n🎯 **Confidence**: ${Math.round(localPrediction.confidence * 100)}%\n\nThis is a high-confidence match from our specialized leaf-disease detector. Please ensure proper ventilation and check moisture levels. For a more detailed analysis, you can ask for Gemini's second opinion!`,
+                timestamp: new Date(),
+             }])
+          }
+        } catch (err) {
+          console.error("Analysis failed", err)
+        } finally {
+          setIsTyping(false)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const [chatId, setChatId] = useState<string | null>(null)
+  const [recentChats, setRecentChats] = useState<any[]>([])
+
+  // Load recent chats from MongoDB
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch("/api/chat-history")
+        if (res.ok) {
+          const data = await res.json()
+          setRecentChats(data)
+        }
+      } catch (err) {
+        console.error("Failed to fetch history", err)
+      }
+    }
+    fetchHistory()
+  }, [])
+
+  // Auto-save chat when messages change
+  useEffect(() => {
+    if (messages.length > 2) { // Save after first response
+       const saveChat = async () => {
+         try {
+           const res = await fetch("/api/chat-history", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ messages, chatId }),
+           })
+           if (res.ok) {
+             const data = await res.json()
+             if (!chatId) setChatId(data._id)
+           }
+         } catch (err) {
+           console.error("Failed to save chat", err)
+         }
+       }
+       const timer = setTimeout(saveChat, 2000)
+       return () => clearTimeout(timer)
+    }
+  }, [messages, chatId])
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex justify-end p-2">
-        <label htmlFor="model-select" className="sr-only">Model</label>
-        <select id="model-select" value={model} onChange={e => setModel(e.target.value)} className="border rounded px-2 py-1 text-xs" title="Choose AI Model">
-          <option value="gemini">Gemini</option>
-          <option value="rag">AgriMithra RAG</option>
-        </select>
-      </div>
-      <div className="bg-card border-b border-border p-4">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center space-x-3 flex-1">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <Bot className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-foreground">AgriMithra AI</h1>
-              <p className="text-xs text-muted-foreground">
-                {isTyping
-                  ? t("typing")
-                  : isListening
-                  ? t("listening")
-                  : geminiStatus === "online"
-                  ? t("connected") || "Connected"
-                  : geminiStatus === "offline"
-                  ? t("aiError") || "Offline"
-                  : "Connecting..."}
-              </p>
+    <div className="min-h-screen bg-[#fafbfc] flex flex-col font-sans">
+      {/* Top Bar - More Premium */}
+      <div className="bg-white/80 backdrop-blur-md sticky top-0 z-20 border-b border-slate-200/60 p-4 shadow-sm">
+        <div className="flex items-center justify-between max-w-2xl mx-auto w-full">
+          <div className="flex items-center space-x-3">
+            <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")} className="rounded-full hover:bg-slate-100">
+              <ArrowLeft className="h-5 w-5 text-slate-600" />
+            </Button>
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-emerald-200 shadow-lg">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <h1 className="font-bold text-slate-800 tracking-tight">AgriMithra AI</h1>
+                <div className="flex items-center space-x-1.5">
+                  <div className={`w-2 h-2 rounded-full ${geminiStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    {isTyping ? t("typing") : geminiStatus === 'online' ? 'Expert Active' : 'Offline'}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+          
+          <div className="flex items-center space-x-2">
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-[10px] font-bold text-slate-400"
+                onClick={() => {
+                   setMessages([{ id: "1", type: "ai", content: t("welcomeMessage"), timestamp: new Date() }]);
+                   setChatId(null);
+                }}
+            >
+                NEW
+            </Button>
+            <select 
+                value={model} 
+                onChange={e => setModel(e.target.value)} 
+                className="text-[10px] font-bold bg-slate-100 border-none rounded-lg px-2 py-1.5 outline-none text-slate-500 appearance-none cursor-pointer"
+            >
+                <option value="gemini">GEMINI</option>
+                <option value="rag">AGRI RAG</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
-        <div className="space-y-4">
+      {/* Chat Space */}
+      <ScrollArea ref={scrollAreaRef} className="flex-1 px-4 py-6">
+        <div className="max-w-2xl mx-auto space-y-6">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] ${message.type === "user" ? "order-2" : "order-1"}`}>
+              <div className={`flex flex-col max-w-[85%] ${message.type === "user" ? "items-end" : "items-start"}`}>
                 <div
-                  className={`rounded-2xl p-3 ${
+                  className={`relative rounded-2xl px-4 py-3 shadow-sm ${
                     message.type === "user"
-                      ? "bg-primary text-primary-foreground ml-2"
-                      : "bg-card border border-border mr-2"
+                      ? "bg-emerald-600 text-white rounded-tr-none"
+                      : "bg-white border border-slate-100 text-slate-800 rounded-tl-none"
                   }`}
                 >
                   {message.mediaType === "image" && message.mediaUrl && (
-                    <img
-                      src={message.mediaUrl || "/placeholder.svg"}
-                      alt="Uploaded crop"
-                      className="w-full h-32 object-cover rounded-lg mb-2"
-                    />
+                    <div className="relative group mb-2 overflow-hidden rounded-xl border border-white/20">
+                      <img
+                        src={message.mediaUrl}
+                        alt="Crop analysis query"
+                        className="w-full max-h-60 object-cover"
+                      />
+                    </div>
                   )}
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{message.content}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      message.type === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                    }`}
-                  >
-                    {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                  
+                  {/* Markdown Rendering for Professional Display */}
+                  <div className="text-[15px] leading-relaxed font-medium markdown-content">
+                    {message.type === 'ai' ? (
+                      <div className="prose prose-sm prose-slate max-w-none">
+                        {message.content.replace(/\*\*/g, '').split('\n').map((line, i) => (
+                           <p key={i} className="mb-2 last:mb-0">{line}</p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-line">{message.content}</p>
+                    )}
+                  </div>
+                  
+                  <div className={`flex items-center mt-1.5 opacity-40 text-[10px] uppercase tracking-tighter font-bold ${message.type === "user" ? "justify-end text-white" : "text-slate-500"}`}>
+                    {message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                  </div>
                 </div>
 
                 {message.type === "ai" && (
-                  <div className="flex items-center space-x-2 mt-2 ml-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleTextToSpeech(message.content)}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Volume2 className="h-3 w-3 mr-1" />
-                      Listen
+                  <div className="flex items-center space-x-1 mt-2.5">
+                    <Button variant="ghost" size="icon" onClick={() => handleTextToSpeech(message.content)} className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-400">
+                      <Volume2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSaveAnswer(message.id)}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Bookmark className="h-3 w-3 mr-1" />
-                      Save
+                    <Button variant="ghost" size="icon" onClick={() => handleSaveAnswer(message.id)} className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-400">
+                      <Bookmark className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleShareAnswer(message.id)}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Share2 className="h-3 w-3 mr-1" />
-                      Share
+                    <Button variant="ghost" size="icon" onClick={() => handleShareAnswer(message.id)} className="h-8 w-8 rounded-full hover:bg-slate-100 text-slate-400">
+                      <Share2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
-              </div>
-
-              <div className={`${message.type === "user" ? "order-1" : "order-2"}`}>
-                <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    message.type === "user" ? "bg-muted" : "bg-primary"
-                  }`}
-                >
-                  {message.type === "user" ? (
-                    <User className="h-3 w-3 text-muted-foreground" />
-                  ) : (
-                    <Bot className="h-3 w-3 text-primary-foreground" />
-                  )}
-                </div>
               </div>
             </div>
           ))}
 
           {isTyping && (
             <div className="flex justify-start">
-              <div className="max-w-[80%]">
-                <div className="bg-card border border-border rounded-2xl p-3 mr-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce delay-200"></div>
-                  </div>
+              <div className="bg-white border border-slate-100 rounded-3xl rounded-tl-none px-5 py-3.5 shadow-sm">
+                <div className="flex space-x-1.5">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce delay-100"></div>
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-bounce delay-200"></div>
                 </div>
-              </div>
-              <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                <Bot className="h-3 w-3 text-primary-foreground" />
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
 
-      <div className="bg-card border-t border-border p-4">
-        {showSuggestions && (
-          <div className="flex flex-wrap gap-2 mb-3">
-            {[
-              t("cropDiseaseAnalysis"),
-              t("currentMarketPrices"),
-              t("weatherForecast"),
-              t("governmentSchemes"),
-              t("fertilizerRecommendations"),
-              t("pestControlMethods"),
-            ].map((suggestion) => (
-              <Button
-                key={suggestion}
-                variant="outline"
-                size="sm"
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="text-xs bg-transparent border-border hover:bg-muted"
-              >
-                {suggestion}
-              </Button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleVoiceInput}
-            className={`${isListening ? "bg-destructive text-destructive-foreground animate-pulse" : ""}`}
-          >
-            <Mic className="h-4 w-4" />
-          </Button>
+      {/* Input Area - Redesigned for Mobile */}
+      <div className="bg-white border-t border-slate-100 p-4 pb-8 sticky bottom-0">
+        <div className="max-w-2xl mx-auto">
+          {showSuggestions && messages.length < 3 && (
+            <ScrollArea className="w-full whitespace-nowrap mb-4 pb-2">
+              <div className="flex space-x-2">
+                {[
+                  t("cropDiseaseAnalysis"),
+                  t("currentMarketPrices"),
+                  t("weatherForecast"),
+                  t("governmentSchemes"),
+                  t("fertilizerRecommendations"),
+                ].map((suggestion) => (
+                  <Button
+                    key={suggestion}
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="text-xs bg-slate-100 hover:bg-emerald-50 text-slate-600 border-none rounded-full whitespace-nowrap"
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
 
-          <div className="flex-1">
+          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-3xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
             <Input
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isListening ? t("listening") : t("askFarmingQuestion")}
+              placeholder={isListening ? "Listening..." : "Tell me about your crop..."}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={isListening}
-              className="border-border"
+              className="bg-transparent border-none focus-visible:ring-0 shadow-none text-slate-800 font-medium placeholder:text-slate-400"
             />
+            
+            <div className="flex items-center pr-1.5 space-x-1">
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => fileInputRef.current?.click()} 
+                className="h-10 w-10 rounded-full text-slate-400 hover:text-emerald-500 hover:bg-white"
+              >
+                <Camera className="h-5 w-5" />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={startVoiceCapture} 
+                className={`h-10 w-10 rounded-full transition-all ${isListening ? "bg-rose-500 text-white animate-pulse" : "text-slate-400 hover:text-emerald-500 hover:bg-white"}`}
+              >
+                <Mic className="h-5 w-5" />
+              </Button>
+
+              <Button
+                onClick={handleSendMessage}
+                disabled={!inputText.trim() && !isListening}
+                size="icon"
+                className="h-10 w-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 shadow-lg"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-
-          <Button variant="ghost" size="sm" onClick={handleImageUpload}>
-            <Camera className="h-4 w-4" />
-          </Button>
-
-          <Button variant="ghost" size="sm" onClick={handleVideoUpload}>
-            <Video className="h-4 w-4" />
-          </Button>
-
-          <Button
-            onClick={handleSendMessage}
-            disabled={!inputText.trim() || isListening}
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
       </div>
     </div>

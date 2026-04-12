@@ -37,12 +37,16 @@ install_deps() {
     fi
 }
 
-# Start RAG service
-start_rag() {
-    echo "Starting RAG service..."
-    $PYTHON_CMD rag_service.py &
+# Start RAG and ML services
+start_services() {
+    echo "Starting Local Services..."
+    $PYTHON_CMD run_simple_server.py &
     RAG_PID=$!
-    echo "RAG service started with PID: $RAG_PID"
+    echo "RAG service started at port 8000 (PID: $RAG_PID)"
+    
+    $PYTHON_CMD ml_service.py &
+    ML_PID=$!
+    echo "ML Disease Prediction service started at port 8001 (PID: $ML_PID)"
 }
 
 # Start frontend
@@ -66,6 +70,9 @@ cleanup() {
     if [ ! -z "$RAG_PID" ]; then
         kill $RAG_PID
     fi
+    if [ ! -z "$ML_PID" ]; then
+        kill $ML_PID
+    fi
     if [ ! -z "$FRONTEND_PID" ]; then
         kill $FRONTEND_PID
     fi
@@ -81,7 +88,7 @@ main() {
     fi
     
     # Start services
-    start_rag
+    start_services
     start_frontend
     
     # Set up cleanup on exit
