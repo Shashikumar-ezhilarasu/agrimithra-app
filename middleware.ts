@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 // Define public routes
 const isPublicRoute = createRouteMatcher([
@@ -12,20 +13,30 @@ const isPublicRoute = createRouteMatcher([
   '/api/chat-history(.*)'
 ])
 
-export default clerkMiddleware((auth, req) => {
-  // If it's a public route, don't enforce authentication
-  if (isPublicRoute(req)) {
-    return NextResponse.next()
-  }
+// Only initialize Clerk's middleware if the keys are actually present.
+const hasClerkKeys = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && !!process.env.CLERK_SECRET_KEY;
 
-  // Check if keys are missing - if so, don't protect to avoid 500
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    return NextResponse.next()
-  }
+let myClerkMiddleware: any;
 
-  // Force protection for other routes
-  auth().protect()
-})
+if (hasClerkKeys) {
+  myClerkMiddleware = clerkMiddleware((auth, req) => {
+    if (!isPublicRoute(req)) {
+      auth().protect()
+    }
+  });
+}
+
+export default function middleware(req: NextRequest, event: any) {
+  // Defensive check: If keys are missing (like in Vercel before environment variables are set up),
+  // totally bypass Clerk to prevent MIDDLEWARE_INVOCATION_FAILED.
+  if (!hasClerkKeys) {
+    console.warn("Bypassing Clerk Auth: Missing CLERK_SECRET_KEY or NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY");
+    return NextResponse.next();
+  }
+  
+  // Otherwise, run the real Clerk middleware
+  return myClerkMiddleware(req, event);
+}
 
 export const config = {
   matcher: [
