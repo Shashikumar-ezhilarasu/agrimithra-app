@@ -29,7 +29,8 @@ import {
   Zap,
   Leaf,
   Droplet,
-  Settings
+  Settings,
+  Clock
 } from "lucide-react"
 import { MultiLanguageProductCard } from "@/components/ui/product-listing"
 
