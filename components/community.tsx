@@ -1,13 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
 import {
   ArrowLeft,
@@ -15,347 +15,224 @@ import {
   Heart,
   MessageCircle,
   Share2,
-  Bookmark,
   MoreVertical,
-  Users,
-  TrendingUp,
-  Award,
   Camera,
   Send,
+  MapPin,
+  Clock,
+  UserCircle
 } from "lucide-react"
 
 interface CommunityPost {
-  id: string
-  author: string
-  avatar: string
-  location: string
-  timeAgo: string
-  contentByLang: Record<string, string>
-  image?: string
+  _id: string
+  userName: string
+  userImage?: string
+  content: string
+  imageUrl?: string
   likes: number
-  comments: number
-  isLiked: boolean
-  category: "tip" | "question" | "success" | "alert"
+  comments: any[]
+  createdAt: string
 }
-
-const samplePosts: CommunityPost[] = [
-  {
-    id: "1",
-    author: "Ravi Kumar",
-    avatar: "/placeholder-user.jpg",
-    location: "Kochi, Kerala",
-    timeAgo: "2 hours ago",
-    contentByLang: {
-      en: "Great harvest this season! Used organic fertilizers and got 20% more yield than last year. Happy to share my experience with fellow farmers.",
-      hi: "इस बार अच्छी फसल हुई! जैविक खाद का उपयोग किया और पिछले साल से 20% ज्यादा उत्पादन मिला। अपने अनुभव किसानों के साथ बाँटकर खुशी हो रही है।",
-      ml: "ഈ സീസണിൽ നല്ല വിളവ് ലഭിച്ചു! ജൈവ വളം ഉപയോഗിച്ചതിനാൽ കഴിഞ്ഞ വർഷത്തേക്കാൾ 20% കൂടുതലായി വിളവ് കിട്ടി. സഹകർഷകരുമായി എന്റെ അനുഭവം പങ്കിടുന്നതിൽ സന്തോഷം.",
-      ta: "இந்த பருவத்தில் நல்ல அறுவடை கிடைத்தது! இயற்கை உரம் பயன்படுத்தி, கடந்த ஆண்டைவிட 20% அதிக மகசூல் பெற்றேன். என் அனுபவத்தை விவசாயிகளுடன் பகிர்ந்து மகிழ்ச்சி.",
-      te: "ఈ సీజన్‌లో మంచి పంట వచ్చింది! సేంద్రియ ఎరువులు వాడి గత ఏడాదికంటే 20% ఎక్కువ దిగుబడి వచ్చింది. నా అనుభవాన్ని రైతు మిత్రులతో పంచుకోవడం ఆనందంగా ఉంది."
-    },
-    image: "/rice-grains.jpg",
-    likes: 24,
-    comments: 8,
-    isLiked: false,
-    category: "success",
-  },
-  {
-    id: "2",
-    author: "Meera Devi",
-    avatar: "/placeholder-user.jpg",
-    location: "Palakkad, Kerala",
-    timeAgo: "4 hours ago",
-    contentByLang: {
-      en: "Has anyone tried drip irrigation for tomatoes? Looking for advice on setup costs and water savings. Please share your experience!",
-      hi: "क्या किसी ने टमाटर के लिए ड्रिप सिंचाई का उपयोग किया है? सेटअप खर्च और पानी की बचत पर सलाह चाहिए। कृपया अपना अनुभव साझा करें!",
-      ml: "തക്കാളിക്ക് ഡ്രിപ്പ് ഇറിഗേഷൻ പരീക്ഷിച്ചവർ ഉണ്ടോ? സജ്ജീകരണ ചെലവും ജലസംരക്ഷണവും സംബന്ധിച്ച് ഉപദേശം വേണം. അനുഭവം പങ്കുവെയ്ക്കണേ!",
-      ta: "தக்காளிக்கு ட்ரிப் பாசனம் செய்து பார்த்தவர்களா? அமைக்கும் செலவு, தண்ணீர் சேமிப்பு குறித்த ஆலோசனை வேண்டும். உங்கள் அனுபவத்தை பகிருங்கள்!",
-      te: "టమోటాకు డ్రిప్ ఇరిగేషన్ వాడినవారు ఉన్నారా? సెటప్ ఖర్చు, నీటి ఆదా గురించి సూచనలు కావాలి. మీ అనుభవం చెప్పండి!"
-    },
-    likes: 12,
-    comments: 15,
-    isLiked: true,
-    category: "question",
-  },
-  {
-    id: "3",
-    author: "Suresh Nair",
-    avatar: "/placeholder-user.jpg",
-    location: "Thrissur, Kerala",
-    timeAgo: "1 day ago",
-    contentByLang: {
-      en: "Pro tip: Apply neem oil spray early morning for best pest control results. Avoid spraying during hot afternoon sun. Works great for my vegetable crops!",
-      hi: "टिप: नीम का तेल सुबह जल्दी छिड़कें, कीट नियंत्रण में बेहतरीन असर होता है। दोपहर की तेज धूप में छिड़काव न करें। मेरी सब्जियों में बहुत अच्छा परिणाम मिला है!",
-      ml: "ടിപ്പ്: വെളുപ്പിന് നേരത്തെ വേപ്പെണ്ണ സ്പ്രേ ചെയ്യുക, കീടനിയന്ത്രണത്തിന് ഏറ്റവും ഫലപ്രദം. ഉച്ചതിരിഞ്ഞ് ചൂടിൽ സ്പ്രേ ചെയ്യരുത്. എന്റെ പച്ചക്കറികളിൽ മികച്ച ഫലം കിട്ടി!",
-      ta: "சிறப்பு குறிப்பு: காலையில் சீக்கிரம் வேப்பெண்ணெய் தெளித்தால் சிறந்த பூச்சி கட்டுப்பாடு கிடைக்கும். மதிய வெயிலில் தெளிக்க வேண்டாம். என் காய்கறிகளில் நல்ல பலன் கிடைத்தது!",
-      te: "సలహా: ఉదయం తొందరగా వేప నూనె స్ప్రే చేస్తే కీటక నియంత్రణ బాగా జరుగుతుంది. మధ్యాహ్నం ఎండలో స్ప్రే చేయకండి. నా కూరగాయలకు చాలా మంచి ఫలితం వచ్చింది!"
-    },
-    likes: 31,
-    comments: 6,
-    isLiked: false,
-    category: "tip",
-  },
-  {
-    id: "4",
-    author: "Krishnan Pillai",
-    avatar: "/placeholder-user.jpg",
-    location: "Wayanad, Kerala",
-    timeAgo: "2 days ago",
-    contentByLang: {
-      en: "⚠️ Alert: Leaf blight spotted in rice crops in our area. Take preventive measures immediately. Contact agriculture officer for fungicide recommendations.",
-      hi: "⚠️ सावधान: हमारे क्षेत्र में धान की फसल में पत्तों की झुलसा बीमारी देखी गई है। तुरंत बचाव के उपाय करें। फफूंदनाशी दवा के लिए कृषि अधिकारी से संपर्क करें।",
-      ml: "⚠️ അലർട്ട്: നമ്മുടെ പ്രദേശത്തെ നെൽവയലുകളിൽ ഇല ബ്ലൈറ്റ് കണ്ടിട്ടുണ്ട്. ഉടൻ പ്രതിരോധ നടപടികൾ സ്വീകരിക്കുക. ഫംഗിസൈഡ് ശുപാർശയ്ക്കായി കൃഷി ഓഫീസറെ ബന്ധപ്പെടുക.",
-      ta: "⚠️ எச்சரிக்கை: எங்கள் பகுதியில் நெல் வயலில் இலை நோய் (பிளைட்) கண்டறியப்பட்டுள்ளது. உடனே முன்னெச்சரிக்கை நடவடிக்கை எடுக்கவும். பூஞ்சை மருந்து ஆலோசனைக்கு விவசாய அதிகாரியை தொடர்பு கொள்ளவும்.",
-      te: "⚠️ హెచ్చరిక: మా ప్రాంతంలోని వరి పంటలో ఆకు బ్లైట్ వ్యాధి కనిపించింది. వెంటనే జాగ్రత్త చర్యలు తీసుకోండి. ఫంగిసైడ్ సూచన కోసం వ్యవసాయ అధికారిని సంప్రదించండి."
-    },
-    likes: 18,
-    comments: 12,
-    isLiked: false,
-    category: "alert",
-  },
-]
 
 export function Community() {
   const router = useRouter()
-  const { t, language } = useLanguage()
-  const [posts, setPosts] = useState<CommunityPost[]>(samplePosts)
-  const [newPost, setNewPost] = useState({ content: "", category: "question" as const })
+  const { t } = useLanguage()
+  const [posts, setPosts] = useState<CommunityPost[]>([])
+  const [newPostContent, setNewPostContent] = useState("")
+  const [guestName, setGuestName] = useState("")
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const postsForLanguage = useMemo(() => {
-    return posts.map((p) => ({
-      ...p,
-      // choose content for the selected language; fallback to English or first available
-      content:
-        p.contentByLang[language] ?? p.contentByLang.en ?? Object.values(p.contentByLang)[0] ?? "",
-    }))
-  }, [posts, language])
-
-  const handleLike = (postId: string) => {
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 }
-          : post,
-      ),
-    )
-  }
-
-  const handleCreatePost = () => {
-    if (!newPost.content.trim()) return
-
-    const post: CommunityPost = {
-      id: Date.now().toString(),
-      author: "You",
-      avatar: "/placeholder-user.jpg",
-      location: "Your Location",
-      timeAgo: "Just now",
-      contentByLang: {
-        [language]: newPost.content,
-      },
-      likes: 0,
-      comments: 0,
-      isLiked: false,
-      category: newPost.category,
-    }
-
-    setPosts((prev) => [post, ...prev])
-    setNewPost({ content: "", category: "question" })
-    setIsPostDialogOpen(false)
-  }
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "success":
-        return "bg-green-100 text-green-800"
-      case "question":
-        return "bg-blue-100 text-blue-800"
-      case "tip":
-        return "bg-yellow-100 text-yellow-800"
-      case "alert":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const fetchPosts = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch("/api/posts")
+      if (res.ok) {
+        const data = await res.json()
+        setPosts(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch posts", err)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "success":
-        return <Award className="h-3 w-3" />
-      case "question":
-        return <MessageCircle className="h-3 w-3" />
-      case "tip":
-        return <TrendingUp className="h-3 w-3" />
-      case "alert":
-        return <Users className="h-3 w-3" />
-      default:
-        return <MessageCircle className="h-3 w-3" />
+  useEffect(() => {
+    fetchPosts()
+  }, [])
+
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) return
+
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: newPostContent,
+          userName: guestName || "Progressive Farmer",
+          userImage: "", // No profile image for guests
+        }),
+      })
+
+      if (res.ok) {
+        setNewPostContent("")
+        setGuestName("")
+        setIsPostDialogOpen(false)
+        fetchPosts() 
+      }
+    } catch (err) {
+      console.error("Failed to create post", err)
     }
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#fafbfc]">
       {/* Header */}
-      <div className="bg-card border-b border-border p-4">
-        <div className="flex items-center space-x-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/marketplace")}>
-            <ArrowLeft className="h-4 w-4" />
+      <div className="bg-white/80 backdrop-blur-md sticky top-0 z-20 border-b border-slate-200/60 p-4 shadow-sm">
+        <div className="flex items-center space-x-3 max-w-2xl mx-auto w-full">
+          <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")} className="rounded-full">
+            <ArrowLeft className="h-5 w-5 text-slate-600" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">{t("community")}</h1>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">{t("community")}</h1>
         </div>
       </div>
 
-      {/* Community Stats */}
-      <div className="p-4 bg-gradient-to-r from-primary/5 to-accent/5">
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-primary">1,247</p>
-            <p className="text-xs text-muted-foreground">Active Farmers</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-accent">3,891</p>
-            <p className="text-xs text-muted-foreground">Posts Shared</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-secondary">892</p>
-            <p className="text-xs text-muted-foreground">Questions Answered</p>
-          </div>
+      {/* Hero Stats */}
+      <div className="bg-emerald-600 p-8 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full scale-150 -translate-y-1/2" />
+        <div className="max-w-2xl mx-auto relative z-10 flex justify-between items-center">
+            <div>
+                <h2 className="text-2xl font-black mb-1">Farmer's Hub</h2>
+                <p className="text-emerald-50 opacity-80 text-xs font-bold uppercase tracking-widest">Open Community • No Login Required</p>
+            </div>
+            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-center">
+                <p className="text-xl font-bold">{posts.length}</p>
+                <p className="text-[10px] font-black opacity-60 uppercase">Live Updates</p>
+            </div>
         </div>
       </div>
 
       {/* Posts Feed */}
-      <div className="p-4 space-y-4 pb-20">
-  {postsForLanguage.map((post, index) => (
-          <Card key={post.id} className="bg-card border-border hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={post.avatar || "/placeholder.svg"} alt={post.author} />
-                    <AvatarFallback>
-                      {post.author
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-sm">{post.author}</h3>
-                      <Badge className={`text-xs ${getCategoryColor(post.category)}`}>
-                        {getCategoryIcon(post.category)}
-                        <span className="ml-1 capitalize">{post.category}</span>
-                      </Badge>
+      <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center space-y-4 py-20 opacity-40">
+            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold uppercase tracking-widest">Syncing with field data...</p>
+          </div>
+        ) : (
+          posts.map((post) => (
+            <Card key={post._id} className="bg-white border-none shadow-2xl shadow-emerald-900/5 rounded-[2rem] overflow-hidden group">
+              <CardHeader className="p-6 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-12 w-12 border-2 border-emerald-50 shadow-sm">
+                      <AvatarImage src={post.userImage} alt={post.userName} />
+                      <AvatarFallback className="bg-emerald-100 text-emerald-600 font-bold">
+                        <UserCircle className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm leading-none mb-1">{post.userName}</h3>
+                      <div className="flex items-center space-x-2 opacity-50">
+                        <MapPin className="h-3 w-3" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">Independent Farmer</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                        <Clock className="h-3 w-3" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {post.location} • {post.timeAgo}
-                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="rounded-full text-slate-300">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6 pt-2">
+                <p className="text-[15px] text-slate-600 leading-relaxed mb-4 whitespace-pre-wrap font-medium">
+                  {post.content}
+                </p>
+
+                {post.imageUrl && (
+                  <img
+                    src={post.imageUrl}
+                    alt="Post image"
+                    className="w-full h-64 object-cover rounded-3xl mb-4 border border-slate-50"
+                  />
+                )}
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                  <div className="flex items-center space-x-1">
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl px-4">
+                      <Heart className="h-4 w-4 mr-2" />
+                      <span className="text-xs font-black">{post.likes}</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl px-4">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      <span className="text-xs font-black">{post.comments?.length || 0}</span>
+                    </Button>
+                  </div>
+                  <div className="flex items-center">
+                     <Button variant="ghost" size="icon" className="text-slate-300 hover:text-emerald-600">
+                       <Share2 className="h-4 w-4" />
+                     </Button>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-foreground mb-3 leading-relaxed">{(post as any).content}</p>
-
-              {post.image && (
-                <img
-                  src={post.image || "/placeholder.svg"}
-                  alt="Post image"
-                  className="w-full h-48 object-cover rounded-lg mb-3"
-                />
-              )}
-
-              <div className="flex items-center justify-between pt-3 border-t border-border">
-                <div className="flex items-center space-x-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleLike(post.id)}
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Heart className={`h-4 w-4 mr-1 ${post.isLiked ? "fill-red-500 text-red-500" : ""}`} />
-                    {post.likes}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                    <MessageCircle className="h-4 w-4 mr-1" />
-                    {post.comments}
-                  </Button>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-                    <Share2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
-      {/* Floating Add Post Button */}
+      {/* Floating Add Post Button (Now Open to Everyone) */}
       <Dialog open={isPostDialogOpen} onOpenChange={setIsPostDialogOpen}>
         <DialogTrigger asChild>
           <Button
             size="lg"
-            className="fixed bottom-20 right-4 h-14 w-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110"
+            className="fixed bottom-24 right-6 h-16 w-16 rounded-[2rem] bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xl shadow-emerald-200 transition-all duration-300 transform hover:scale-110 group z-30"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-8 w-8 group-hover:rotate-90 transition-transform" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle>{t("shareExperience")}</DialogTitle>
+        <DialogContent className="max-w-md mx-auto rounded-[2rem] border-none shadow-2xl p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-black text-slate-800 tracking-tight">Share Experience</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Category</label>
-              <div className="flex space-x-2 mt-2">
-                {[
-                  { id: "question", label: "Question", icon: MessageCircle },
-                  { id: "tip", label: "Tip", icon: TrendingUp },
-                  { id: "success", label: "Success", icon: Award },
-                ].map((category) => (
-                  <Button
-                    key={category.id}
-                    variant={newPost.category === category.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewPost({ ...newPost, category: category.id as any })}
-                    className="flex-1"
-                  >
-                    <category.icon className="h-3 w-3 mr-1" />
-                    {category.label}
-                  </Button>
-                ))}
-              </div>
+          <div className="space-y-6">
+            <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Your Name</label>
+                <Input 
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="e.g. Ramesh from Kerala"
+                    className="bg-slate-50 border-none rounded-2xl h-12 text-sm font-bold"
+                />
             </div>
-            <div>
-              <label className="text-sm font-medium">Share your experience</label>
-              <Textarea
-                value={newPost.content}
-                onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                placeholder="What would you like to share with the farming community?"
-                rows={4}
-                className="mt-2"
-              />
+            <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2">Field Status</label>
+                <Textarea
+                    value={newPostContent}
+                    onChange={(e) => setNewPostContent(e.target.value)}
+                    placeholder="What's the update from your crops?"
+                    rows={4}
+                    className="bg-slate-50 border-none rounded-3xl p-6 text-slate-800 font-medium placeholder:text-slate-400 focus-visible:ring-emerald-500/20"
+                />
             </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" className="flex-1 bg-transparent">
+            <div className="flex space-x-3">
+              <Button variant="outline" className="flex-1 rounded-2xl h-14 bg-white border-slate-100 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
                 <Camera className="h-4 w-4 mr-2" />
-                Add Photo
+                Capture
               </Button>
               <Button
                 onClick={handleCreatePost}
-                disabled={!newPost.content.trim()}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={!newPostContent.trim()}
+                className="flex-1 rounded-2xl h-14 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-100 font-bold uppercase tracking-widest text-[10px]"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Post
+                Update
               </Button>
             </div>
           </div>
