@@ -26,7 +26,9 @@ import {
   Clock,
   MapPin,
   Sunrise,
-  Sunset
+  Sunset,
+  BookOpen,
+  FlaskConical
 } from "lucide-react"
 
 export function Dashboard() {
@@ -312,27 +314,43 @@ export function Dashboard() {
         </div>
 
         {/* Bottom Actions Area */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button
-            variant="outline"
-            className="group h-24 flex-col space-y-2 bg-white hover:bg-slate-50 border-slate-100 hover:border-emerald-100 rounded-[1.5rem] transition-all"
+        <div className="grid grid-cols-4 gap-3">
+          <button
+            className="group flex-col flex items-center justify-center h-20 bg-white hover:bg-emerald-50 border border-slate-100 hover:border-emerald-100 rounded-2xl transition-all"
             onClick={() => router.push("/marketplace")}
           >
-            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-emerald-50 transition-colors">
-              <ShoppingCart className="h-6 w-6 text-emerald-600" />
+            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-emerald-50 transition-colors mb-1">
+              <ShoppingCart className="h-5 w-5 text-emerald-600" />
             </div>
-            <span className="text-xs font-black uppercase text-slate-400 tracking-widest">{t("marketplace")}</span>
-          </Button>
-          <Button
-            variant="outline"
-            className="group h-24 flex-col space-y-2 bg-white hover:bg-slate-50 border-slate-100 hover:border-emerald-100 rounded-[1.5rem] transition-all"
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Market</span>
+          </button>
+          <button
+            className="group flex-col flex items-center justify-center h-20 bg-white hover:bg-emerald-50 border border-slate-100 hover:border-emerald-100 rounded-2xl transition-all"
             onClick={() => router.push("/community")}
           >
-            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-emerald-50 transition-colors">
-              <Users className="h-6 w-6 text-emerald-600" />
+            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-emerald-50 transition-colors mb-1">
+              <Users className="h-5 w-5 text-emerald-600" />
             </div>
-            <span className="text-xs font-black uppercase text-slate-400 tracking-widest">{t("community")}</span>
-          </Button>
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Community</span>
+          </button>
+          <button
+            className="group flex-col flex items-center justify-center h-20 bg-white hover:bg-blue-50 border border-slate-100 hover:border-blue-100 rounded-2xl transition-all"
+            onClick={() => router.push("/hub")}
+          >
+            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-blue-50 transition-colors mb-1">
+              <BookOpen className="h-5 w-5 text-blue-600" />
+            </div>
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Hub</span>
+          </button>
+          <button
+            className="group flex-col flex items-center justify-center h-20 bg-white hover:bg-amber-50 border border-slate-100 hover:border-amber-100 rounded-2xl transition-all"
+            onClick={() => router.push("/hub?tab=prices")}
+          >
+            <div className="p-2 rounded-xl bg-slate-50 group-hover:bg-amber-50 transition-colors mb-1">
+              <TrendingUp className="h-5 w-5 text-amber-600" />
+            </div>
+            <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Prices</span>
+          </button>
         </div>
       </div>
 
