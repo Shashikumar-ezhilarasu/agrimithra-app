@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-}
+  experimental: {
+    // This helps with some CSS variable loading issues in newer Next.js versions
+    optimizePackageImports: ["lucide-react"],
+  },
+};
 
-export default nextConfig
+export default nextConfig;

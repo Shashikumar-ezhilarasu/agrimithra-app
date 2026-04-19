@@ -10,7 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  await connectToDatabase();
+  const db = await connectToDatabase();
+  
+  if (!db) {
+    if (req.method === 'GET') {
+      // In development, return an empty array if DB is down rather than 500
+      return res.status(200).json([]);
+    }
+    return res.status(503).json({ error: 'Database connection failed. Please check if your IP is whitelisted in MongoDB Atlas.' });
+  }
 
   if (req.method === 'GET') {
     try {

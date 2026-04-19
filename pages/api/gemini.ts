@@ -23,8 +23,8 @@ const callGeminiAPI = async (prompt: string, apiKey: string, imageData?: string)
   const contents: any[] = [];
   const parts: any[] = [{ text: `System: You are an agricultural disease expert. 
   1. Identify the crop and any diseases/pests from images provided. 
-  2. Provide concise mitigation steps. 
-  3. ALWAYS include a "Recommended Project" (e.g., a specific organic fertilizer recipe or a irrigation setup) that helps the farmer.
+  2. Provide detailed mitigation steps. 
+  3. ALWAYS include a "Recommended Project" (e.g., a specific organic fertilizer recipe or a irrigation setup) that helps the farmer in depth.
   
   User Query: ${prompt}` }];
 
@@ -42,7 +42,7 @@ const callGeminiAPI = async (prompt: string, apiKey: string, imageData?: string)
   contents.push({ parts });
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -52,7 +52,7 @@ const callGeminiAPI = async (prompt: string, apiKey: string, imageData?: string)
           temperature: 0.4,
           topK: 32,
           topP: 0.8,
-          maxOutputTokens: 1000,
+          maxOutputTokens: 8192,
         }
       }),
     }
