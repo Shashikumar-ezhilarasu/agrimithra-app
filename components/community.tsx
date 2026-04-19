@@ -37,11 +37,8 @@ interface CommunityPost {
 export function Community() {
   const router = useRouter()
   const { t } = useLanguage()
-  const [posts, setPosts] = useState<CommunityPost[]>([])
-  const [newPostContent, setNewPostContent] = useState("")
-  const [guestName, setGuestName] = useState("")
-  const [isPostDialogOpen, setIsPostDialogOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [circles, setCircles] = useState<any[]>([])
+  const [joinedCircles, setJoinedCircles] = useState<string[]>([])
 
   const fetchPosts = async () => {
     setIsLoading(true)
@@ -58,9 +55,53 @@ export function Community() {
     }
   }
 
+  const fetchCircles = async () => {
+    try {
+      const res = await fetch("/api/communities")
+      if (res.ok) {
+        const data = await res.json()
+        setCircles(data)
+      }
+    } catch (err) {
+      console.error("Failed to fetch circles", err)
+    }
+  }
+
   useEffect(() => {
     fetchPosts()
+    fetchCircles()
+    // Load joined circles from local storage for persistence in this demo
+    const saved = localStorage.getItem("joinedCircles")
+    if (saved) setJoinedCircles(JSON.parse(saved))
   }, [])
+
+  const handleJoinCircle = async (circleId: string) => {
+    const isJoined = joinedCircles.includes(circleId)
+    const action = isJoined ? "leave" : "join"
+    
+    try {
+      const res = await fetch("/api/communities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ circleId, action }),
+      })
+      
+      if (res.ok) {
+        if (isJoined) {
+          const newJoined = joinedCircles.filter(id => id !== circleId)
+          setJoinedCircles(newJoined)
+          localStorage.setItem("joinedCircles", JSON.stringify(newJoined))
+        } else {
+          const newJoined = [...joinedCircles, circleId]
+          setJoinedCircles(newJoined)
+          localStorage.setItem("joinedCircles", JSON.stringify(newJoined))
+        }
+        fetchCircles() // Refresh member counts
+      }
+    } catch (err) {
+      console.error("Failed to update circle membership", err)
+    }
+  }
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim()) return
@@ -105,17 +146,64 @@ export function Community() {
         <div className="max-w-2xl mx-auto relative z-10 flex justify-between items-center">
             <div>
                 <h2 className="text-2xl font-black mb-1">Farmer's Hub</h2>
-                <p className="text-emerald-50 opacity-80 text-xs font-bold uppercase tracking-widest">Open Community • No Login Required</p>
+                <p className="text-emerald-50 opacity-80 text-xs font-bold uppercase tracking-widest">Connect • Grow • Succeed</p>
             </div>
             <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-center">
                 <p className="text-xl font-bold">{posts.length}</p>
-                <p className="text-[10px] font-black opacity-60 uppercase">Live Updates</p>
+                <p className="text-[10px] font-black opacity-60 uppercase">Active Discussions</p>
             </div>
+        </div>
+      </div>
+
+      {/* Community Circles Selection */}
+      <div className="max-w-2xl mx-auto px-4 mt-8">
+        <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Join Communities</h2>
+            <div className="h-px bg-slate-100 flex-1 ml-4" />
+        </div>
+        <div className="flex overflow-x-auto pb-4 space-x-4 no-scrollbar -mx-4 px-4">
+            {circles.map((circle) => (
+                <Card key={circle._id} className="flex-shrink-0 w-64 bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xl shadow-emerald-900/5 group hover:border-emerald-200 transition-all">
+                    <div className="relative h-24 overflow-hidden">
+                        <img src={circle.image} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <Badge className="absolute bottom-2 left-2 bg-white/20 backdrop-blur-md text-[8px] border-none text-white font-bold uppercase">
+                            {circle.category}
+                        </Badge>
+                    </div>
+                    <CardContent className="p-4">
+                        <h3 className="font-bold text-slate-800 text-sm mb-1">{circle.name}</h3>
+                        <p className="text-[10px] text-slate-500 line-clamp-2 mb-3 h-6 font-medium">{circle.description}</p>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-1">
+                                <Users className="h-3 w-3 text-emerald-500" />
+                                <span className="text-[10px] font-black text-slate-700">{circle.memberCount.toLocaleString()}</span>
+                            </div>
+                            <Button 
+                                size="sm" 
+                                onClick={() => handleJoinCircle(circle._id)}
+                                variant={joinedCircles.includes(circle._id) ? "outline" : "default"}
+                                className={`rounded-xl h-8 px-4 text-[10px] font-black uppercase tracking-tighter ${
+                                    joinedCircles.includes(circle._id) 
+                                    ? "border-emerald-100 text-emerald-600 hover:bg-emerald-50" 
+                                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-100"
+                                }`}
+                            >
+                                {joinedCircles.includes(circle._id) ? "Joined" : "Join"}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
         </div>
       </div>
 
       {/* Posts Feed */}
       <div className="max-w-2xl mx-auto p-4 space-y-6 pb-24">
+        <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Recent Updates</h2>
+            <div className="h-px bg-slate-100 flex-1 ml-4" />
+        </div>
         {isLoading ? (
           <div className="flex flex-col items-center justify-center space-y-4 py-20 opacity-40">
             <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
