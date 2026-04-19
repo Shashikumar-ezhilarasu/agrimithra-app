@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLanguage } from "@/contexts/language-context"
 import { ArrowLeft, Mic, Camera, Send, Volume2, Bookmark, Share2, MoreVertical, User, Bot, Video } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface Message {
   id: string
@@ -23,11 +25,6 @@ const enhancedResponses = {
     "🔍 **Image Analysis Complete!** I can see brown leaf spots on your rice crop. This appears to be **Leaf Blight Disease**. \n\n**Treatment:** Apply Propiconazole 25% EC @ 1ml/liter water. Spray during early morning or evening. \n\n**Prevention:** Ensure proper field drainage and remove affected leaves immediately.",
     "📸 **Crop Disease Detected!** Your tomato plants show signs of **Early Blight**. The circular brown spots with concentric rings are characteristic symptoms. \n\n**Immediate Action:** Use copper-based fungicide spray. Remove infected leaves and improve air circulation. \n\n**Confidence:** 92%",
     "🌾 **Nutrient Deficiency Identified!** Your wheat crop shows **Nitrogen Deficiency** - yellowing from older leaves upward. \n\n**Solution:** Apply Urea @ 50kg/acre immediately. Follow up with balanced NPK fertilizer. \n\n**Expected Recovery:** 7-10 days",
-  ],
-  audio_analysis: [
-    "🎤 **Voice Query Processed!** I heard you asking about pest control in cotton crops. \n\n**For Cotton Bollworm:** Use pheromone traps and spray Bacillus thuringiensis (Bt) @ 2g/liter water. Monitor weekly and spray during evening hours. \n\n**Cost:** ₹200-300 per acre",
-    "🔊 **Audio Analysis Complete!** Based on your voice query about irrigation timing, here's my recommendation: \n\n**Best Time:** Early morning (5-7 AM) or evening (6-8 PM). Avoid midday watering as it leads to water loss through evaporation. \n\n**Frequency:** Every 2-3 days depending on soil moisture.",
-    "🎵 **Voice Command Understood!** You asked about market prices. Current rates in your area: \n\n**Rice:** ₹2,100/quintal (+5.2%) \n**Wheat:** ₹2,050/quintal (+2.1%) \n**Corn:** ₹1,800/quintal (-1.5%) \n\n**Recommendation:** Good time to sell rice!",
   ],
   video_analysis: [
     "🎥 **Video Analysis Complete!** I analyzed your field walkthrough video. Your crop growth looks healthy overall, but I noticed: \n\n**Issues Found:** \n• Uneven plant spacing in rows 3-5 \n• Some yellowing in the northeast corner \n• Water stagnation near the boundary \n\n**Recommendations:** Improve drainage and apply balanced fertilizer to affected areas.",
@@ -102,7 +99,8 @@ export function AIChat() {
 
   useEffect(() => {
     if (mode === "photo") {
-        handleImageUpload()
+        // Trigger file picker for real analysis
+        setTimeout(() => fileInputRef.current?.click(), 500)
     } else if (mode === "video") {
         handleVideoUpload()
     } else if (mode === "voice") {
@@ -220,58 +218,22 @@ export function AIChat() {
   }
 
   const handleVoiceInput = () => {
-    if (!isListening) {
-      setIsListening(true)
-
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        type: "user",
-        content: "🎤 [Voice Recording...]",
-        timestamp: new Date(),
-        mediaType: "audio",
-      }
-      setMessages((prev) => [...prev, userMessage])
-
-      setTimeout(() => {
-        setIsListening(false)
-
-        // Update the user message to show completed recording
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === userMessage.id
-              ? { ...msg, content: "🎤 [Voice Query: How to control pests in my cotton crop?]" }
-              : msg,
-          ),
-        )
-
-        setIsTyping(true)
-
-        setTimeout(() => {
-          const responses = enhancedResponses.audio_analysis
-          const aiResponse: Message = {
-            id: (Date.now() + 2).toString(),
-            type: "ai",
-            content: responses[Math.floor(Math.random() * responses.length)],
-            timestamp: new Date(),
-          }
-          setMessages((prev) => [...prev, aiResponse])
-          setIsTyping(false)
-        }, 1500)
-      }, 3000)
-    }
+    // Just trigger the real voice capture logic
+    startVoiceCapture()
   }
 
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return
+  const handleSendMessage = async (text?: string) => {
+    const messageContent = text || inputText;
+    if (!messageContent.trim()) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
-      content: inputText,
+      content: messageContent,
       timestamp: new Date(),
     }
     setMessages((prev) => [...prev, userMessage])
-    setInputText("")
+    if (!text) setInputText("")
     setIsTyping(true)
     setShowSuggestions(false)
     
@@ -296,9 +258,9 @@ export function AIChat() {
       const langName = languageNames[language as keyof typeof languageNames] || 'English';
       const prompt = `You are a helpful farming assistant for Indian farmers. The user's query is in ${langName}. 
 YOUR RESPONSE MUST BE ENTIRELY IN ${langName} ONLY. DO NOT USE ANY OTHER LANGUAGE.
-Query: ${inputText}
+Query: ${messageContent}
 
-Give a detailed, conversational, and helpful response for farmers.`;
+Give an extremely detailed, comprehensive, conversational, and helpful response for farmers. Provide as much relevant information as possible, including step-by-step guides if applicable.`;
       while (retries < maxRetries) {
         try {
           const response = await fetch("/api/gemini", {
@@ -382,26 +344,51 @@ Give a detailed, conversational, and helpful response for farmers.`;
     }
     setMessages((prev) => [...prev, aiMessage])
     setIsTyping(false)
+
+    // NEW: Auto-speak AI response if it's a voice-driven interaction or just generally helpful
+    if (aiText && !aiText.startsWith("Gemini Error")) {
+      handleTextToSpeech(aiText)
+    }
   }
 
   const handleTextToSpeech = (text: string) => {
     if (!window.speechSynthesis) {
-      alert("Text-to-speech is not supported in this browser.")
+      console.warn("Text-to-speech is not supported in this browser.")
       return
     }
+
+    // Clean markdown for cleaner speech
+    const cleanText = text
+      .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold
+      .replace(/\*(.*?)\*/g, "$1") // Remove italics
+      .replace(/#(.*?)\n/g, "$1\n") // Remove headers
+      .replace(/\[(.*?)\]\(.*?\)/g, "$1") // Remove links
+      .replace(/`{1,3}.*?`{1,3}/gs, "") // Remove code blocks
+      .replace(/•/g, "") // Remove bullets
+      .replace(/\n\n/g, ". ") // Replace double newlines with period
+
     const langMap: Record<string, string> = {
       en: "en-IN",
       hi: "hi-IN",
       ta: "ta-IN",
       ml: "ml-IN",
       kn: "kn-IN",
+      te: "te-IN",
     }
     const synth = window.speechSynthesis
-    const utter = new window.SpeechSynthesisUtterance(text)
-    utter.lang = langMap[language] || "en-IN"
-    utter.rate = 1
+    const utter = new window.SpeechSynthesisUtterance(cleanText)
+    
+    // Try to find a high-quality local voice for the language
+    const voices = synth.getVoices()
+    const targetLang = langMap[language] || "en-IN"
+    const voice = voices.find(v => v.lang.startsWith(targetLang))
+    if (voice) utter.voice = voice
+    
+    utter.lang = targetLang
+    utter.rate = 0.9 // Slightly slower for better clarity
     utter.pitch = 1
-    synth.cancel()
+    
+    synth.cancel() // Stop any current speech
     synth.speak(utter)
   }
 
@@ -426,6 +413,7 @@ Give a detailed, conversational, and helpful response for farmers.`;
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<any>(null)
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
@@ -451,12 +439,68 @@ Give a detailed, conversational, and helpful response for farmers.`;
   }, [])
 
   const startVoiceCapture = () => {
-    if (recognitionRef.current && !isListening) {
-      setIsListening(true)
-      recognitionRef.current.start()
-    } else if (isListening) {
-      recognitionRef.current.stop()
-      setIsListening(false)
+    if (recognitionRef.current) {
+      if (isListening) {
+        recognitionRef.current.stop()
+        setIsListening(false)
+        return
+      }
+
+      // Map our language codes to BCP 47 tags for SpeechRecognition
+      const langMap: Record<string, string> = {
+        en: "en-IN",
+        hi: "hi-IN",
+        ta: "ta-IN",
+        ml: "ml-IN",
+        kn: "kn-IN",
+        te: "te-IN",
+      }
+      
+      recognitionRef.current.lang = langMap[language] || "en-IN"
+      recognitionRef.current.continuous = true // Keep listening until manual stop or silence
+      recognitionRef.current.interimResults = true // Show results as they come
+
+      recognitionRef.current.onresult = (event: any) => {
+        let interimTranscript = ""
+        let finalTranscript = ""
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript
+          } else {
+            interimTranscript += event.results[i][0].transcript
+          }
+        }
+
+        const currentText = finalTranscript || interimTranscript
+        if (currentText) {
+          setInputText(currentText)
+          
+          // Clear existing timer
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+          
+          // Set a new timer to auto-send after 1.5 seconds of silence
+          silenceTimerRef.current = setTimeout(() => {
+            if (recognitionRef.current) recognitionRef.current.stop()
+            setIsListening(false)
+            handleSendMessage(currentText)
+            setInputText("") // Clear input after auto-send
+          }, 1500)
+        }
+      }
+
+      recognitionRef.current.onend = () => {
+        // If we have text, we could auto-send here if the stop was natural
+        setIsListening(false)
+      }
+
+      try {
+        recognitionRef.current.start()
+        setIsListening(true)
+      } catch (err) {
+        console.error("Speech recognition start failed", err)
+        setIsListening(false)
+      }
     } else {
       alert("Speech recognition is not supported in this browser.")
     }
@@ -497,36 +541,46 @@ Give a detailed, conversational, and helpful response for farmers.`;
 
           // 2. Decide: Use local result or fallback to Gemini
           // Fail back if no local ml, error status, or low confidence (< 0.7)
-          if (!localPrediction || localPrediction.status === "error" || localPrediction.confidence < 0.7) {
-            console.log("Local ML uncertain or unavailable. Requesting Gemini analysis...");
-            const response = await fetch("/api/gemini", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ 
-                prompt: `Analyze this image for agricultural diseases. (Local ML predicted: ${localPrediction?.label || 'Unknown'} with ${Math.round((localPrediction?.confidence || 0) * 100)}% confidence). Please provide an expert diagnosis and mitigation projects.`, 
-                imageData: url 
-              }),
-            })
-            const data = await response.json()
-            if (response.ok && data.result) {
-              setMessages((prev) => [...prev, {
-                id: (Date.now() + 1).toString(),
-                type: "ai",
-                content: data.result,
-                timestamp: new Date(),
-              }])
-            }
-          } else {
-             // 3. Local ML succeeded with high confidence
-             setMessages((prev) => [...prev, {
-                id: (Date.now() + 1).toString(),
-                type: "ai",
-                content: `🌱 **Local ML Prediction**: ${localPrediction.label.replace(/_/g, ' ')}\n🎯 **Confidence**: ${Math.round(localPrediction.confidence * 100)}%\n\nThis is a high-confidence match from our specialized leaf-disease detector. Please ensure proper ventilation and check moisture levels. For a more detailed analysis, you can ask for Gemini's second opinion!`,
-                timestamp: new Date(),
-             }])
+          // 2. Decide: Always show Gemini analysis as requested by user, but show Local ML as a quick preview
+          setMessages((prev) => [...prev, {
+            id: (Date.now() + 1).toString(),
+            type: "ai",
+            content: `🌱 **Local Analysis**: ${localPrediction?.label?.replace(/_/g, ' ') || "Analyzing..."} (${Math.round((localPrediction?.confidence || 0) * 100)}% confidence)\n\n**Requesting full expert diagnosis from Gemini...**`,
+            timestamp: new Date(),
+          }])
+
+          const response = await fetch("/api/gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              prompt: `Provide an extremely detailed agricultural diagnostic report for this leaf. (Local ML identified it as: ${localPrediction?.label || 'Unknown'}). 
+              Please include:
+              1. Detailed disease/pest identification.
+              2. Scientific and common names.
+              3. Environmental factors contributing to the issue.
+              4. Immediate remedies (organic and chemical).
+              5. Long-term prevention strategies.
+              6. Specific "Recommended Project" for recovery.`, 
+              imageData: url 
+            }),
+          })
+          const data = await response.json()
+          if (response.ok && data.result) {
+            setMessages((prev) => [...prev, {
+              id: (Date.now() + 2).toString(),
+              type: "ai",
+              content: data.result,
+              timestamp: new Date(),
+            }])
           }
         } catch (err) {
           console.error("Analysis failed", err)
+          setMessages((prev) => [...prev, {
+            id: (Date.now() + 3).toString(),
+            type: "ai",
+            content: "❌ Sorry, I couldn't complete the full analysis. Please check your connection and try again.",
+            timestamp: new Date(),
+          }])
         } finally {
           setIsTyping(false)
         }
@@ -652,10 +706,10 @@ Give a detailed, conversational, and helpful response for farmers.`;
                   {/* Markdown Rendering for Professional Display */}
                   <div className="text-[15px] leading-relaxed font-medium markdown-content">
                     {message.type === 'ai' ? (
-                      <div className="prose prose-sm prose-slate max-w-none">
-                        {message.content.replace(/\*\*/g, '').split('\n').map((line, i) => (
-                           <p key={i} className="mb-2 last:mb-0">{line}</p>
-                        ))}
+                      <div className="prose prose-sm prose-emerald max-w-none dark:prose-invert">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content}
+                        </ReactMarkdown>
                       </div>
                     ) : (
                       <p className="whitespace-pre-line">{message.content}</p>
