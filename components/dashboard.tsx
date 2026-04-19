@@ -171,7 +171,7 @@ export function Dashboard() {
               </div>
               <div className="flex items-center space-x-1 opacity-60">
                 <MapPin className="h-3 w-3 text-slate-400" />
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Live Location</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase">{t("liveLocation")}</p>
               </div>
             </div>
           </div>
@@ -223,10 +223,10 @@ export function Dashboard() {
               </Button>
             </div>
             <h3 className="text-xl font-bold text-slate-800 mb-2">
-              {isListening ? t("listening") : "Ask AgriMithra"}
+            {isListening ? t("listening") : t("askAgriMithra")}
             </h3>
             <p className="text-slate-500 mb-8 max-w-xs mx-auto text-sm leading-relaxed">
-              {isListening ? "I'm listening to your voice query now..." : "Speak naturally about your crops, pests, or market concerns"}
+              {isListening ? t("listeningSub") : t("talkSub")}
             </p>
 
             {/* Input Methods Grid */}
@@ -267,7 +267,7 @@ export function Dashboard() {
         {/* Quick Updates Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">Quick Updates</h2>
+             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">{t("quickUpdates")}</h2>
              <div className="h-px bg-slate-100 flex-1 ml-4" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -306,9 +306,9 @@ export function Dashboard() {
         {/* News & Schemes Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">Latest Schemes & News</h2>
+             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">{t("latestSchemesNews")}</h2>
              <div className="h-px bg-slate-100 flex-1 ml-4" />
-             <Button variant="ghost" className="text-emerald-600 font-bold text-xs">View All</Button>
+             <Button variant="ghost" className="text-emerald-600 font-bold text-xs">{t("viewAll")}</Button>
           </div>
           <NewsUpdates />
         </div>
