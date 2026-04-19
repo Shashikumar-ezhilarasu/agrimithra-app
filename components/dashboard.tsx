@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useLanguage } from "@/contexts/language-context"
+import { NewsUpdates } from "@/components/news-updates"
 import {
   Home,
   MessageCircle,
@@ -298,6 +299,16 @@ export function Dashboard() {
               </Card>
             ))}
           </div>
+        </div>
+
+        {/* News & Schemes Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+             <h2 className="text-lg font-black text-slate-900 tracking-tight uppercase">Latest Schemes & News</h2>
+             <div className="h-px bg-slate-100 flex-1 ml-4" />
+             <Button variant="ghost" className="text-emerald-600 font-bold text-xs">View All</Button>
+          </div>
+          <NewsUpdates />
         </div>
 
         {/* Bottom Actions Area */}
